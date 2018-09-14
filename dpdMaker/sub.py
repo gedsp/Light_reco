@@ -7,7 +7,7 @@ import glob
 
 if __name__ == "__main__":
         
-    datafile = file("../Settings.h")
+    datafile = file("../config_reco.h")
     filedir=''
     for line in datafile:
         if line.startswith('//'):
