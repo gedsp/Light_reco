@@ -2,6 +2,7 @@
 #define CONFIG_RECO_H
 
 static const int N_PMT = 5;
+static const int N_LEM = 12;
 
 //set up the input folder where the light-charge matched data is stored.
 const string matched_data_dir = "/Volumes/data/root_files/2018Feb05/"; // local 
