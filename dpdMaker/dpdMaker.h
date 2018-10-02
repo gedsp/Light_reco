@@ -412,7 +412,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		
 		double ped_start = _nsamples==1000?0.0:218.;
 		double ped_stop  = _nsamples==1000?0.5:228.;
-		double ped2_start = _nsamples==1000?0.0:218.5;
+		double ped2_start = _nsamples==1000?0.0:228.5;
 		double ped2_stop  = _nsamples==1000?0.5:229.;
 		double ped_end_start = _nsamples==1000?3.5:910.;
 		double ped_end_stop  = _nsamples==1000?4.0:920.;
