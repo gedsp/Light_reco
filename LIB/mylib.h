@@ -497,7 +497,7 @@ lets_pause();
 
 
 
-#include"WaveUtils.h"
+#include "WaveUtils.h"
 // MAL: Added optional parameter to provide pedestal value as input,
 // rather than relying on bins 0:30
 float get_S1full(TH1F *h, double &S1_width, int &binpeak, double ped=0)
