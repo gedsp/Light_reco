@@ -1,4 +1,5 @@
 #include "../LIB/WaveformAnalysis.cc"
+#include "../LIB/mylib.h"
 #include "../config_reco.h"
 //#include "THDet.C"
 
