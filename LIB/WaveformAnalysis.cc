@@ -255,6 +255,8 @@ double WaveformAnalysis::calc_S1_charge(TH1* hist, double ped, double tau)
 }
 */
 
+
+
 double WaveformAnalysis::calc_S1_charge_m2(const TH1* hist, double ped, int binpeak, int &endbin)
 {
 	endbin=0;
@@ -269,17 +271,11 @@ double WaveformAnalysis::calc_S1_charge_m2(const TH1* hist, double ped, int binp
 	
 	return integral(hist,tmin-0.05,hcenter(hist,endbin),ped);
 }
-		
-	
-double WaveformAnalysis::calc_S1_parameters(const TH1* hist, double ped, int &binpeak, double &width, int minbin=0, int maxbin=0)
+
+
+int WaveformAnalysis::find_S1_binpeak(const TH1* hist, int minbin=0, int maxbin=0)
 {
-	binpeak=0;
-	width=0;
-	double charge=0;
-	
-	gStyle->SetOptStat(0);
-    gStyle->SetPadTickX(1);
-    gStyle->SetPadTickY(1);
+	int binpeak=0;
 	
 	TH1F* h = (TH1F*)hist->Clone("htmp");
 	
@@ -288,106 +284,17 @@ double WaveformAnalysis::calc_S1_parameters(const TH1* hist, double ped, int &bi
 	
 	binpeak=h->GetMinimumBin();
 	
+	delete h;
 	
-	/*
-	TCanvas* c1 = new TCanvas("c1","c1",1200,400);
-	c1->Divide(3,1);
+	return binpeak;
+}
 
-	c1->cd(1);
-	h->Draw("hist");
-	
-	double tmin=hcenter(h,binpeak);
-	double tmin_min = tmin-0.02;
-	double tmin_max1 = tmin+0.06;
-	double tmin_max2 = tmin+0.08;
-	double tmin_max3 = tmin+0.980;
-	double tmin_max4 = tmin+3.980;
-	
-	TLine ll0,l0,l1,l2,l3,l4;
-	
-	c1->Update();
-	ll0 = TLine(gPad->GetUxmin(),ped,gPad->GetUxmax(),ped);
-	ll0.SetLineColor(kRed);
-	ll0.Draw("same");
-	l0 = TLine(tmin_min,gPad->GetUymin(),tmin_min,gPad->GetUymax());
-	l0.SetLineColor(kRed);
-	l0.Draw("same");
-	l1=TLine(tmin_max1,gPad->GetUymin(),tmin_max1,gPad->GetUymax());
-	l1.SetLineColor(kOrange-7);
-	l1.Draw("same");
-	l2=TLine(tmin_max2,gPad->GetUymin(),tmin_max2,gPad->GetUymax());
-	l2.SetLineColor(kGreen+3);
-	l2.Draw("same");
-	l3=TLine(tmin_max3,gPad->GetUymin(),tmin_max3,gPad->GetUymax());
-	l3.SetLineColor(kOrange+8);
-	l3.Draw("same");
-	l4=TLine(tmin_max4,gPad->GetUymin(),tmin_max4,gPad->GetUymax());
-	l4.SetLineColor(kViolet);
-	l4.Draw("same");
-	
-	c1->cd(2);
-	TH1F* htmp = (TH1F*)h->Clone("htmp");
-	htmp->GetXaxis()->SetRange(htmp->FindBin(tmin-0.05),htmp->FindBin(tmin+0.14));
-	htmp->Draw("hist");
-	c1->Update();
-	ll0 = TLine(gPad->GetUxmin(),ped,gPad->GetUxmax(),ped);
-	ll0.SetLineColor(kRed);
-	ll0.Draw("same");
-	l0 = TLine(tmin_min,gPad->GetUymin(),tmin_min,gPad->GetUymax());
-	l0.SetLineColor(kRed);
-	l0.Draw("same");
-	l1=TLine(tmin_max1,gPad->GetUymin(),tmin_max1,gPad->GetUymax());
-	l1.SetLineColor(kOrange-7);
-	l1.Draw("same");
-	l2=TLine(tmin_max2,gPad->GetUymin(),tmin_max2,gPad->GetUymax());
-	l2.SetLineColor(kGreen+3);
-	l2.Draw("same");
-	l3=TLine(tmin_max3,gPad->GetUymin(),tmin_max3,gPad->GetUymax());
-	l3.SetLineColor(kOrange+8);
-	l3.Draw("same");
-	l4=TLine(tmin_max4,gPad->GetUymin(),tmin_max4,gPad->GetUymax());
-	l4.SetLineColor(kViolet);
-	l4.Draw("same");
-	
-	
-	c1->cd(3);
-	TH1F* hint = (TH1F*)h->Clone("hint");
-	double t0=hcenter(h,minbin);
-	double tmax=hcenter(h,maxbin);
-	double totcharge=integral(h,t0,tmax,ped);
-	for (int i=minbin; i<=maxbin; i++)
-	{
-		hint->SetBinContent(i,(1./totcharge)*integral(h,t0,hcenter(hint,i),ped));
-	}
-	hint->GetYaxis()->SetTitle("Fraction of 'total' charge");
-	hint->Draw("hist");
-	c1->Update();
-	ll0 = TLine(gPad->GetUxmin(),ped,gPad->GetUxmax(),ped);
-	ll0.SetLineColor(kRed);
-	ll0.Draw("same");
-	l0 = TLine(tmin_min,gPad->GetUymin(),tmin_min,gPad->GetUymax());
-	l0.SetLineColor(kRed);
-	l0.Draw("same");
-	l1=TLine(tmin_max1,gPad->GetUymin(),tmin_max1,gPad->GetUymax());
-	l1.SetLineColor(kOrange-7);
-	l1.Draw("same");
-	l2=TLine(tmin_max2,gPad->GetUymin(),tmin_max2,gPad->GetUymax());
-	l2.SetLineColor(kGreen+3);
-	l2.Draw("same");
-	l3=TLine(tmin_max3,gPad->GetUymin(),tmin_max3,gPad->GetUymax());
-	l3.SetLineColor(kOrange+8);
-	l3.Draw("same");
-	l4=TLine(tmin_max4,gPad->GetUymin(),tmin_max4,gPad->GetUymax());
-	l4.SetLineColor(kViolet);
-	l4.Draw("same");
 
-	c1->Modified();
-	c1->Update();
+double WaveformAnalysis::calc_S1_width(const TH1* hist, int binpeak, double ped)
+{
+	double width=0;
 	
-	lets_pause();
-	*/
-	
-	h->GetXaxis()->SetRange(0,0);
+	TH1F* h = (TH1F*)hist->Clone("htmp");
 	
 	double halfamp = 0.5*(ped-hget(h,binpeak));
 	
@@ -420,17 +327,11 @@ double WaveformAnalysis::calc_S1_parameters(const TH1* hist, double ped, int &bi
 	
 	width=(S1_end-1)-(S1_start+1)+deltax_start+deltax_end;
 	
-	// now integrate to find charge between -50 ns and 3.95 us
-	double tmin=hcenter(h,binpeak);
-	charge = integral(h,tmin-0.05,tmin+3.95,ped);
-	
-	delete h;
-
-	return charge;
+	return width;
 }
 
 
-double WaveformAnalysis::calc_S2_parameters(const TH1* hist, double ped, int binpeak_S1, int &binpeak_S2, int &binavg_S2)
+double WaveformAnalysis::calc_S2_parameters(const TH1* hist, double ped, double t_S1, int &binpeak_S2, int &binavg_S2)
 {
 	binpeak_S2=0;
 	binavg_S2=0;
@@ -443,13 +344,9 @@ double WaveformAnalysis::calc_S2_parameters(const TH1* hist, double ped, int bin
 	
 	TH1F* h = (TH1F*)hist->Clone("htmp");
 	
-	double tmin_S1 = hcenter(h,binpeak_S1);
-
-	double tstart_S2 = tmin_S1+3.95;
+	double tstart_S2 = t_S1+0.95;
+	double tend_S2 = 900.; 
 	int startbin = h->FindBin(tstart_S2);
-	
-	//int endbin = h->GetNbinsX()+1;
-	double tend_S2 = 900.; // h->GetBinLowEdge(endbin)+h->GetBinWidth(endbin);
 	int endbin = h->FindBin(tend_S2);
 	
 	h->GetXaxis()->SetRange(startbin,endbin-1);
@@ -476,4 +373,50 @@ double WaveformAnalysis::calc_S2_parameters(const TH1* hist, double ped, int bin
 	delete h;
 	
 	return charge;
+}
+
+double WaveformAnalysis::calc_S2_width(TH1* hist, double ped, double pedrms, double t_S1, double t_start, double t_end)
+{
+	double width=0;
+	t_start=0;
+	t_end=0;
+	
+	TH1F* h = (TH1F*)hist->Clone("htmp");
+	
+	ped = WaveformAnalysis::baseline(h,pedrms,h->FindBin(218),h->FindBin(228)-1); 
+	
+	int bin_S1 = h->FindBin(t_S1+3.95);
+	int bin_end = h->FindBin(900.);
+
+	int S2_start=0;
+	int S2_end=0;
+	
+	double thresh = 10.*pedrms;
+		
+	for (int i=bin_S1; i<h->GetNbinsX()+1; i++) 
+	{
+		if ((ped-hget(h,i))>thresh)
+		{
+			if (hget(h,i+1)>hget(h,i)) continue; // wf falling
+			else { S2_start=i; break; }
+		}
+	}
+
+	for (int i=bin_end; i>bin_S1; i--) 
+	{
+		if (fabs(ped-hget(h,i))>thresh) { S2_end=i; break; }
+	}
+	
+	if (S2_start) t_start=hcenter(h,S2_start);
+	else t_start=0;
+	if (S2_end) t_end=hcenter(h,S2_end);
+	else t_end=0;
+
+	width=t_end-t_start;
+	
+	//printf("ped = %0.2f +/- %0.2f, thresh = %0.1f, S2_start = %0.1f, S2_end = %0.1f, width = %0.1f\n",ped,pedrms,thresh,t_start,t_end,width);
+	
+	delete h;
+	
+	return width;
 }

@@ -53,15 +53,25 @@ namespace WaveformAnalysis
 	*/
 	std::vector<int> valleys(const TH1* hist, double threshold, int minBin=-1,int maxBin=-1);
 	
+	
+	// Returns (charge) integral of S1 (over pedestal) in the desired time range (in units of ADC*binwidth)
+	inline double calc_S1_charge(const TH1* hist, double ped, double tstart=-0.05, double tend=0.95) 
+		{ return integral(hist,tstart,tend,ped); }
+
+	// Returns (charge) integral of S1 (over pedestal) up to bin where wf reaches pedestal
 	double calc_S1_charge_m2(const TH1* hist, double ped, int binpeak, int &endbin);
-	
-	// Returns (charge) integral of S1 (over baseline) in a range of 2xFWHM (in units of ADC*binwidth)
-	// Bin of S1 peak and width (in # of bins) are also calculated
-	// Looks for S1 between minbin and maxbin
+
+	// Looks for S1 binpeak between minbin and maxbin
 	// If minbin and maxbin arguments are not provided, looks for S1 in entire bin range
-	double calc_S1_parameters(const TH1* hist, double ped, int &binpeak, double &width, int minbin=0, int maxbin=0);
+	int find_S1_binpeak(const TH1* hist, int minbin=0, int maxbin=0);
+
+	// Calculates FWHM (in # of bins)
+	double calc_S1_width(const TH1* hist, int binpeak, double ped);
 	
-	double calc_S2_parameters(const TH1* hist, double ped, int binpeak_S1, int &binpeak_S2, int &binavg_S2);
+	
+	double calc_S2_parameters(const TH1* hist, double ped, double t_S1, int &binpeak_S2, int &binavg_S2);
+	
+	double calc_S2_width(TH1* hist, double ped, double pedrms, double t_S1, double t_start, double t_end);
 
 }
 
