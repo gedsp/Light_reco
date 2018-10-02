@@ -71,7 +71,7 @@ namespace WaveformAnalysis
 	
 	double calc_S2_parameters(const TH1* hist, double ped, double t_S1, int &binpeak_S2, int &binavg_S2);
 	
-	double calc_S2_width(TH1* hist, double ped, double pedrms, double t_S1, double t_start, double t_end);
+	double calc_S2_width(TH1* hist, double ped, double pedrms, double t_S1, double &t_start, double &t_end);
 
 }
 

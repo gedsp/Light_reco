@@ -375,7 +375,7 @@ double WaveformAnalysis::calc_S2_parameters(const TH1* hist, double ped, double 
 	return charge;
 }
 
-double WaveformAnalysis::calc_S2_width(TH1* hist, double ped, double pedrms, double t_S1, double t_start, double t_end)
+double WaveformAnalysis::calc_S2_width(TH1* hist, double ped, double pedrms, double t_S1, double &t_start, double &t_end)
 {
 	double width=0;
 	t_start=0;
