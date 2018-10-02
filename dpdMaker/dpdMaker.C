@@ -32,13 +32,13 @@ void get_voltages(int myRun, int mySubrun, double volts[N_PMT], bool &lemON)
 		{
 			found=true;
 			cout << "Entry found for run " << myRun << " and subrun " << mySubrun << endl;
+			for (uint k=0; k<N_LEM; k++) sum_lem+=lemu[k]+lemd[k];
 			cout << "Sum of all LEM voltages = " << sum_lem << endl;
 			if (sum_lem>0.) lemON=true;
 			for (uint k=0; k<N_PMT; k++) volts[k]=pmt[k];
 			printf("volts = {");
 			for (int k=0; k<N_PMT; k++) printf("%0.2f,",volts[k]);
 			printf("\b}\n");
-			for (uint k=0; k<N_LEM; k++) sum_lem+=lemu[k]+lemd[k];
 		}
 		i++;
 	}
