@@ -1,4 +1,4 @@
-void get_gains(float gains[5], float voltage[5])
+void get_gains(double gains[5], double voltage[5])
 {
 	std::vector<TF1*> _myfit;
 

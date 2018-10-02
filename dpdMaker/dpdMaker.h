@@ -1,18 +1,19 @@
-#include "../LIB/WaveUtils.h"
+#include "../LIB/WaveformAnalysis.cc"
 #include "../config_reco.h"
 //#include "THDet.C"
-
-static const int NSAMP_CUTOFF = 10000;
 
 bool debug=false;
 bool display_tracks=false;
 bool display_waveforms=false;
 
+double ADC_to_volts = 2./4096.;
+double charge_e = 1.602E-19;
+
 // in this library, the S2 will be integrated over the whole waveform.
 
-void make_dpd(int run, int subrun, float gains[5], string outfilename);
+void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename);
 
-void make_dpd(int run, int subrun, float gains[5], string outfilename)
+void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 {
 	TString infilename = Form("%s/%d-%d-Parser.root",matched_data_dir.c_str(),run,subrun);
 	
@@ -25,12 +26,9 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 	//const int kmaxntracks=2000;
 	
 	#include "../LIB/branches_2018Feb05.h"
-	
-	TH1F * htime = new TH1F("delta_time_per_event","TimeStamp_{Charge} - TimeStamp_{Light}",200,-1,1);
-	TH2F * hcorr = new TH2F("mean_deltat","Correlation of totlight vs totcharge;Charge;Light",1000,0,0,1000,0,0);
 
-	float time_charge=0.0;
-	float time_light=0.0;
+	double time_charge=0.0;
+	double time_light=0.0;
 
 	TFile ofile(outfilename.c_str(),"RECREATE");
 	TTree *dpd= new TTree("dpd","result tree");
@@ -39,125 +37,161 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 	int _subrun_out;
 	int _nev_out;
 
-	float _time_charge;
-	float _time_light;
+	double _time_charge;
+	double _time_light;
 	
-	float _pmt_charge[6];
-	float _pmt_npe[6];
-	float _pmt_ped[5];
-	float _pmt_pedrms[5];
-	float _pmt_ped_end[5];
-	float _pmt_pedrms_end[5];
+	double _pmt_charge[N_PMT+1];
+	double _pmt_npe[N_PMT+1];
+	double _pmt_ped[N_PMT];
+	double _pmt_pedrms[N_PMT];
+	double _pmt_ped_end[N_PMT];
+	double _pmt_ped_end_fit_m[N_PMT];
+	double _pmt_ped_end_fit_n[N_PMT];
+	double _pmt_ped_end_fit_chi2[N_PMT];
+	int    _pmt_ped_end_fit_ndof[N_PMT];
+	double _pmt_pedrms_end[N_PMT];
+	double _pmt_wvf_properties[N_PMT][2];
+	int   _pmt_npeaks[N_PMT];
+	double _pmt_peaks_tau[N_PMT][100];
 
-	float _pmt_S1_charge[6];
-	float _pmt_S1_npe[6];
-	float _pmt_S1_width[5];
-	float _pmt_S1_amp[5];
-	float _pmt_S1_tau[5];
+	double _pmt_S1_charge[N_PMT+1];
+	double _pmt_S1_charge_m2[N_PMT+1];
+	double _pmt_S1_npe[N_PMT+1];
+	double _pmt_S1_npe_m2[N_PMT+1];
+	double _pmt_S1_width[N_PMT];
+	double _pmt_S1_amp[N_PMT];
+	double _pmt_S1_tau[N_PMT];
+	double _pmt_S1_tau_end[N_PMT];
 
-	float _pmt_S2_charge[6];
-	float _pmt_S2_npe[6];
-	float _pmt_S2_width[5];
-	float _pmt_S2_amp[5];
-	float _pmt_S2_tau[5];
+	double _pmt_S2_charge[N_PMT+1];
+	double _pmt_S2_npe[N_PMT+1];
+	double _pmt_S2_width[N_PMT];
+	double _pmt_S2_amp[N_PMT];
+	double _pmt_S2_tau[N_PMT];
+	double _pmt_S2_tau_avg[N_PMT];
 	
-	float _pmt_S2_gaus_charge[6];
-	float _pmt_S2_gaus_npe[6];
-	float _pmt_S2_gaus_width[5];
-	float _pmt_S2_gaus_amp[5];
-	float _pmt_S2_gaus_tau[5];
+	double _pmt_S2_gaus_charge[N_PMT+1];
+	double _pmt_S2_gaus_npe[N_PMT+1];
+	double _pmt_S2_gaus_width[N_PMT];
+	double _pmt_S2_gaus_amp[N_PMT];
+	double _pmt_S2_gaus_tau[N_PMT];
 
-	float _tpc_totcharge;
-	float _tpc_totrecocharge;
-	float _tpc_track_charge[1000]={0};
+	double _tpc_totcharge;
+	double _tpc_totrecocharge;
+	double _tpc_track_charge[1000]={0};
 
-	float _crt_mYX;
-	float _crt_mZX;
-	float _crt_nYX;
-	float _crt_nZX;
+	double _crt_mYX;
+	double _crt_mZX;
+	double _crt_nYX;
+	double _crt_nZX;
+	double _crt_ToF_n;
+	double _crt_track_lenFV_n;
+	int _crt_isFV_n;
 
-	float _tpc_mYX[kmaxntracks]={0};
-	float _tpc_mZX[kmaxntracks]={0};
-	float _tpc_nYX[kmaxntracks]={0};
-	float _tpc_nZX[kmaxntracks]={0};
 	short _ntracks;
+	short _n_sel_tracks;
+	double _tpc_track_mYX[kmaxntracks]={0};
+	double _tpc_track_mZX[kmaxntracks]={0};
+	double _tpc_track_nYX[kmaxntracks]={0};
+	double _tpc_track_nZX[kmaxntracks]={0};
+	double _tpc_track_startX[kmaxntracks];
+	double _tpc_track_endX[kmaxntracks];
+	
+	double _tpc_track_start_theta[kmaxntracks]={0};
+	double _tpc_track_start_phi[kmaxntracks]={0};
+	
 	int _tpc_track_fitresult_yx[kmaxntracks]={-1};
 	int _tpc_track_fitresult_zx[kmaxntracks]={-1};
 	int _crt_matchreco;
-	float _Track_Length_n[kmaxntracks]={0};
+	double _tpc_track_length_n[kmaxntracks]={0};
 
-	float _tpc_drift_time_at_pmt_pos[5]={0};
+	double _tpc_drift_time_at_pmt_pos[N_PMT]={0};
 
-	TBranch * _bn_ev=dpd->Branch("ev"      , &_nev_out         , "ev/I"      );
-	TBranch * _bn_run=dpd->Branch("run"      , &_run_out         , "run/I"      );
-	TBranch * _bn_subrun=dpd->Branch("subrun"      , &_subrun_out         , "subrun/I"      );
-	TBranch * _bn_nsamples = dpd->Branch("nsamples", &_nsamples , "nsamples/I");
-	TBranch * _bn_time_charge = dpd->Branch("time_charge", &_time_charge  , "time_charge/F");
-	TBranch * _bn_time_light = dpd->Branch("time_light", &_time_light  , "time_light/F");
-
-	TBranch * _bn_crt_matchreco=dpd->Branch("crt_matchreco"      , &_crt_matchreco         , "crt_matchreco/I"      );
-	float _pmt_wvf_properties[5][2];
-	TBranch * _bn_pmt_wvf_properties = dpd->Branch("pmt_wvf_properties"    , _pmt_wvf_properties       , "pmt_wvf_properties[5][2]/F"    );
-
-	TBranch * _bn_pmt_charge 	= dpd->Branch("pmt_charge"    , _pmt_charge       , "pmt_charge[6]/F"    );	
-	TBranch * _bn_pmt_npe		= dpd->Branch("pmt_npe"   , _pmt_npe      , "pmt_npe[6]/F"   );
-	TBranch * _bn_pmt_ped       = dpd->Branch("pmt_ped"   ,  _pmt_ped      , "pmt_ped[5]/F"   );
-	TBranch * _bn_pmt_pedrms    = dpd->Branch("pmt_pedrms", _pmt_pedrms   , "pmt_pedrms[5]/F"   );
-	TBranch * _bn_pmt_ped_end   = dpd->Branch("pmt_ped_end"   ,  _pmt_ped_end      , "pmt_ped_end[5]/F"   );
-	TBranch * _bn_pmt_pedrms_end   = dpd->Branch("pmt_pedrms_end"   ,  _pmt_pedrms_end      , "pmt_pedrms_end[5]/F"   );
-
-	TBranch * _bn_pmt_S1_charge	= dpd->Branch("pmt_S1_charge"   ,_pmt_S1_charge      , "pmt_S1_charge[6]/F"   );
-	TBranch * _bn_pmt_S1_npe	= dpd->Branch("pmt_S1_npe"   , _pmt_S1_npe      , "pmt_S1_npe[6]/F"   );
-	TBranch * _bn_pmt_S1_width	= dpd->Branch("pmt_S1_width"   , _pmt_S1_width      , "pmt_S1_width[5]/F"   );
-	TBranch * _bn_pmt_S1_amp	= dpd->Branch("pmt_S1_amp"   , _pmt_S1_amp      , "pmt_S1_amp[5]/F"   );
-	TBranch * _bn_pmt_S1_tau	= dpd->Branch("pmt_S1_tau"   , _pmt_S1_tau      , "pmt_S1_tau[5]/F"   );
-
-	TBranch * _bn_pmt_S2_charge	= dpd->Branch("pmt_S2_charge"   ,_pmt_S2_charge      , "pmt_S2_charge[6]/F"   );
-	TBranch * _bn_pmt_S2_npe	= dpd->Branch("pmt_S2_npe"   , _pmt_S2_npe      , "pmt_S2_npe[6]/F"   );
-	TBranch * _bn_pmt_S2_width	= dpd->Branch("pmt_S2_width"   , _pmt_S2_width      , "pmt_S2_width[5]/F"   );
-	TBranch * _bn_pmt_S2_amp	= dpd->Branch("pmt_S2_amp"   , _pmt_S2_amp      , "pmt_S2_amp[5]/F"   );
-	TBranch * _bn_pmt_S2_tau	= dpd->Branch("pmt_S2_tau"   , _pmt_S2_tau      , "pmt_S2_tau[5]/F"   );
+	TBranch * _bn_ev			= dpd->Branch("ev"      , &_nev_out         , "ev/I"      );
+	TBranch * _bn_run			= dpd->Branch("run"      , &_run_out         , "run/I"      );
+	TBranch * _bn_subrun		= dpd->Branch("subrun"      , &_subrun_out         , "subrun/I"      );
+	TBranch * _bn_nsamples 		= dpd->Branch("nsamples", &_nsamples , "nsamples/I");
+	TBranch * _bn_time_charge 	= dpd->Branch("time_charge", &_time_charge  , "time_charge/D");
+	TBranch * _bn_time_light 	= dpd->Branch("time_light", &_time_light  , "time_light/D");
 	
-	TBranch * _bn_pmt_S2_gaus_charge	= dpd->Branch("pmt_S2_gaus_charge"   ,_pmt_S2_gaus_charge      , "pmt_S2_gaus_charge[6]/F"   );
-	TBranch * _bn_pmt_S2_gaus_npe	= dpd->Branch("pmt_S2_gaus_npe"   , _pmt_S2_gaus_npe      , "pmt_S2_gaus_npe[6]/F"   );
-	TBranch * _bn_pmt_S2_gaus_width	= dpd->Branch("pmt_S2_gaus_width"   , _pmt_S2_gaus_width      , "pmt_S2_gaus_width[5]/F"   );
-	TBranch * _bn_pmt_S2_gaus_amp	= dpd->Branch("pmt_S2_gaus_amp"   , _pmt_S2_gaus_amp      , "pmt_S2_gaus_amp[5]/F"   );
-	TBranch * _bn_pmt_S2_gaus_tau	= dpd->Branch("pmt_S2_gaus_tau"   , _pmt_S2_gaus_tau      , "pmt_S2_gaus_tau[5]/F"   );
+	TBranch * _bn_ntracks			= dpd->Branch("ntracks"   	,&_ntracks      	, "ntracks/S"   );
+	TBranch * _bn_n_sel_tracks		= dpd->Branch("n_sel_tracks"   	,&_n_sel_tracks      	, "n_sel_tracks/S"   );
+	TBranch * _bn_tpc_totcharge 	= dpd->Branch("tpc_totcharge"   , &_tpc_totcharge       , "tpc_totcharge/D"    );	
+	TBranch * _bn_tpc_totrecocharge = dpd->Branch("tpc_totrecocharge"   , &_tpc_totrecocharge       , "tpc_totrecocharge/D"    );	
+	
+	TBranch * _bn_crt_matchreco		= dpd->Branch("crt_matchreco"      , &_crt_matchreco         , "crt_matchreco/I"      );
+	TBranch * _bn_crt_mYX			= dpd->Branch("crt_mYX"   	,&_crt_mYX      	, "crt_mYX/D"   );
+	TBranch * _bn_crt_mZX			= dpd->Branch("crt_mZX"   	,&_crt_mZX      	, "crt_mZX/D"   );
+	TBranch * _bn_crt_nYX			= dpd->Branch("crt_nYX"   	,&_crt_nYX      	, "crt_nYX/D"   );
+	TBranch * _bn_crt_nZX			= dpd->Branch("crt_nZX"   	,&_crt_nZX      	, "crt_nZX/D"   );
+	TBranch * _bn_crt_ToF			= dpd->Branch("crt_ToF"   	,&_crt_ToF_n      	, "crt_ToF/D"   );
+	TBranch * _bn_crt_track_lenFV	= dpd->Branch("crt_track_lenFV"   	,&_crt_track_lenFV_n      	, "crt_track_lenFV/D"   );
+	TBranch * _bn_crt_isFV			= dpd->Branch("crt_isFV"   	,&_crt_isFV_n      	, "crt_isFV/I"   );
+	
+	TBranch * _bn_pmt_wvf_properties = dpd->Branch("pmt_wvf_properties"    , _pmt_wvf_properties       , "pmt_wvf_properties[5][2]/D"    );
 
+	TBranch * _bn_pmt_charge 		= dpd->Branch("pmt_charge"    , _pmt_charge       , "pmt_charge[6]/D"    );	
+	TBranch * _bn_pmt_npe			= dpd->Branch("pmt_npe"   , _pmt_npe      , "pmt_npe[6]/D"   );
+	TBranch * _bn_pmt_ped       	= dpd->Branch("pmt_ped"   ,  _pmt_ped      , "pmt_ped[5]/D"   );
+	TBranch * _bn_pmt_pedrms    	= dpd->Branch("pmt_pedrms", _pmt_pedrms   , "pmt_pedrms[5]/D"   );
+	TBranch * _bn_pmt_ped_end   	= dpd->Branch("pmt_ped_end"   ,  _pmt_ped_end      , "pmt_ped_end[5]/D"   );
+	TBranch * _bn_pmt_pedrms_end   	= dpd->Branch("pmt_pedrms_end"   ,  _pmt_pedrms_end      , "pmt_pedrms_end[5]/D"   );
+	TBranch * _bn_pmt_ped_end_fit_m   	= dpd->Branch("pmt_ped_end_fit_m"   ,  _pmt_ped_end_fit_m      , "pmt_ped_end_fit_m[5]/D"   );
+	TBranch * _bn_pmt_ped_end_fit_n   	= dpd->Branch("pmt_ped_end_fit_n"   ,  _pmt_ped_end_fit_n      , "pmt_ped_end_fit_n[5]/D"   );
+	TBranch * _bn_pmt_ped_end_fit_chi2  = dpd->Branch("pmt_ped_end_fit_chi2"   ,  _pmt_ped_end_fit_chi2      , "pmt_ped_end_fit_chi2[5]/D"   );
+	TBranch * _bn_pmt_ped_end_fit_ndof  = dpd->Branch("pmt_ped_end_fit_ndof"   ,  _pmt_ped_end_fit_ndof      , "pmt_ped_end_fit_ndof[5]/I"   );
+	TBranch * _bn_pmt_npeaks	    = dpd->Branch("pmt_npeaks"   ,  _pmt_npeaks    , "pmt_npeaks[5]/I"   );
+	TBranch * _bn_pmt_peaks_tau 	= dpd->Branch("pmt_peaks_tau"   , _pmt_peaks_tau   ,  "pmt_peaks_tau[5][pmt_npeaks]/D"   );
+	
+	TBranch * _bn_pmt_S1_charge	= dpd->Branch("pmt_S1_charge"   ,_pmt_S1_charge      , "pmt_S1_charge[6]/D"   );
+	TBranch * _bn_pmt_S1_charge_m2	= dpd->Branch("pmt_S1_charge_m2"   ,_pmt_S1_charge_m2      , "pmt_S1_charge_m2[6]/D"   );
+	TBranch * _bn_pmt_S1_npe	= dpd->Branch("pmt_S1_npe"   , _pmt_S1_npe      , "pmt_S1_npe[6]/D"   );
+	TBranch * _bn_pmt_S1_npe_m2	= dpd->Branch("pmt_S1_npe_m2"   , _pmt_S1_npe_m2      , "pmt_S1_npe_m2[6]/D"   );
+	TBranch * _bn_pmt_S1_width	= dpd->Branch("pmt_S1_width"   , _pmt_S1_width      , "pmt_S1_width[5]/D"   );
+	TBranch * _bn_pmt_S1_amp	= dpd->Branch("pmt_S1_amp"   , _pmt_S1_amp      , "pmt_S1_amp[5]/D"   );
+	TBranch * _bn_pmt_S1_tau	= dpd->Branch("pmt_S1_tau"   , _pmt_S1_tau      , "pmt_S1_tau[5]/D"   );
+	TBranch * _bn_pmt_S1_tau_end	= dpd->Branch("pmt_S1_tau_end"   , _pmt_S1_tau_end      , "pmt_S1_tau_end[5]/D"   );
 
-	TBranch * _bn_ntracks		= dpd->Branch("ntracks"   	,&_ntracks      	, "ntracks/S"   );
-	TBranch * _bn_tpc_totcharge 	= dpd->Branch("tpc_totcharge"   , &_tpc_totcharge       , "tpc_totcharge/F"    );	
-	TBranch * _bn_tpc_totrecocharge 	= dpd->Branch("tpc_totrecocharge"   , &_tpc_totrecocharge       , "tpc_totrecocharge/F"    );	
-	TBranch * _bn_tpc_track_charge	= dpd->Branch("tpc_track_charge",&_tpc_track_charge     , "tpc_track_charge[ntracks]/F"   );
+	TBranch * _bn_pmt_S2_charge	= dpd->Branch("pmt_S2_charge"   ,_pmt_S2_charge      , "pmt_S2_charge[6]/D"   );
+	TBranch * _bn_pmt_S2_npe	= dpd->Branch("pmt_S2_npe"   , _pmt_S2_npe      , "pmt_S2_npe[6]/D"   );
+	TBranch * _bn_pmt_S2_width	= dpd->Branch("pmt_S2_width"   , _pmt_S2_width      , "pmt_S2_width[5]/D"   );
+	TBranch * _bn_pmt_S2_amp	= dpd->Branch("pmt_S2_amp"   , _pmt_S2_amp      , "pmt_S2_amp[5]/D"   );
+	TBranch * _bn_pmt_S2_tau	= dpd->Branch("pmt_S2_tau"   , _pmt_S2_tau      , "pmt_S2_tau[5]/D"   );
+	TBranch * _bn_pmt_S2_tau_avg = dpd->Branch("pmt_S2_tau_avg"   , _pmt_S2_tau_avg      , "pmt_S2_tau_avg[5]/D"   );
+	
+	TBranch * _bn_pmt_S2_gaus_charge	= dpd->Branch("pmt_S2_gaus_charge"   ,_pmt_S2_gaus_charge      , "pmt_S2_gaus_charge[6]/D"   );
+	TBranch * _bn_pmt_S2_gaus_npe		= dpd->Branch("pmt_S2_gaus_npe"   , _pmt_S2_gaus_npe      , "pmt_S2_gaus_npe[6]/D"   );
+	TBranch * _bn_pmt_S2_gaus_width		= dpd->Branch("pmt_S2_gaus_width"   , _pmt_S2_gaus_width      , "pmt_S2_gaus_width[5]/D"   );
+	TBranch * _bn_pmt_S2_gaus_amp		= dpd->Branch("pmt_S2_gaus_amp"   , _pmt_S2_gaus_amp      , "pmt_S2_gaus_amp[5]/D"   );
+	TBranch * _bn_pmt_S2_gaus_tau		= dpd->Branch("pmt_S2_gaus_tau"   , _pmt_S2_gaus_tau      , "pmt_S2_gaus_tau[5]/D"   );
+	
+	TBranch * _bn_tpc_track_charge	= dpd->Branch("tpc_track_charge",&_tpc_track_charge     , "tpc_track_charge[ntracks]/D"   );
+	
+	TBranch * _bn_tpc_track_mYX		= dpd->Branch("tpc_track_mYX"   	,_tpc_track_mYX      	, "tpc_track_mYX[ntracks]/D"   );
+	TBranch * _bn_tpc_track_mZX		= dpd->Branch("tpc_track_mZX"   	,_tpc_track_mZX      	, "tpc_track_mZX[ntracks]/D"   );
+	TBranch * _bn_tpc_track_nYX		= dpd->Branch("tpc_track_nYX"   	,_tpc_track_nYX      	, "tpc_track_nYX[ntracks]/D"   );
+	TBranch * _bn_tpc_track_nZX		= dpd->Branch("tpc_track_nZX"   	,_tpc_track_nZX      	, "tpc_track_nZX[ntracks]/D"   );
 
-	TBranch * _bn_crt_mYX		= dpd->Branch("crt_mYX"   	,&_crt_mYX      	, "crt_mYX/F"   );
-	TBranch * _bn_crt_mZX		= dpd->Branch("crt_mZX"   	,&_crt_mZX      	, "crt_mZX/F"   );
-	TBranch * _bn_crt_nYX		= dpd->Branch("crt_nYX"   	,&_crt_nYX      	, "crt_nYX/F"   );
-	TBranch * _bn_crt_nZX		= dpd->Branch("crt_nZX"   	,&_crt_nZX      	, "crt_nZX/F"   );
+	TBranch * _bn_tpc_track_startX	= dpd->Branch("tpc_track_startX"   	,_tpc_track_startX      	, "tpc_track_startX[ntracks]/D"   );
+	TBranch * _bn_tpc_track_endX	= dpd->Branch("tpc_track_endX"   	,_tpc_track_endX      	, "tpc_track_endX[ntracks]/D"   );
+	
+	TBranch * _bn_tpc_track_start_theta		= dpd->Branch("tpc_track_start_theta"   	,_tpc_track_start_theta     	, "tpc_track_start_theta[ntracks]/D"   );
+	TBranch * _bn_tpc_track_start_phi		= dpd->Branch("tpc_track_start_phi"   	,_tpc_track_start_phi      	, "tpc_track_start_phi[ntracks]/D"   );
 
-	TBranch * _bn_tpc_mYX		= dpd->Branch("tpc_mYX"   	,_tpc_mYX      	, "tpc_mYX[ntracks]/F"   );
-	TBranch * _bn_tpc_mZX		= dpd->Branch("tpc_mZX"   	,_tpc_mZX      	, "tpc_mZX[ntracks]/F"   );
-	TBranch * _bn_tpc_nYX		= dpd->Branch("tpc_nYX"   	,_tpc_nYX      	, "tpc_nYX[ntracks]/F"   );
-	TBranch * _bn_tpc_nZX		= dpd->Branch("tpc_nZX"   	,_tpc_nZX      	, "tpc_nZX[ntracks]/F"   );
+	TBranch * _bn_tpc_track_fitresult_yx	= dpd->Branch("tpc_track_fitresult_yx"   	,_tpc_track_fitresult_yx      	, "tpc_track_fitresult_yx[ntracks]/I"   );
+	TBranch * _bn_tpc_track_fitresult_zx	= dpd->Branch("tpc_track_fitresult_zx"   	,_tpc_track_fitresult_zx      	, "tpc_track_fitresult_zx[ntracks]/I"   );
 
-	float _tpc_startX[kmaxntracks];
-	float _tpc_endX[kmaxntracks];
-	TBranch * _bn_tpc_startX	= dpd->Branch("tpc_startX"   	,_tpc_startX      	, "tpc_startX[ntracks]/F"   );
-	TBranch * _bn_tpc_endX		= dpd->Branch("tpc_endX"   	,_tpc_endX      	, "tpc_endX[ntracks]/F"   );
-
-	TBranch * _bn_tpc_track_fitresult_yx= dpd->Branch("tpc_track_fitresult_yx"   	,_tpc_track_fitresult_yx      	, "tpc_track_fitresult_yx[ntracks]/I"   );
-	TBranch * _bn_tpc_track_fitresult_zx= dpd->Branch("tpc_track_fitresult_zx"   	,_tpc_track_fitresult_zx      	, "tpc_track_fitresult_zx[ntracks]/I"   );
-
-	TBranch * _bn_Track_Length_n	= dpd->Branch("Track_Length"		, _Track_Length_n		, "Track_Length[ntracks]/F"       );
-	TBranch * _bn_tpc_drift_time_at_pmt_pos	= dpd->Branch("tpc_drift_time_at_pmt_pos"		, _tpc_drift_time_at_pmt_pos		, "tpc_drift_time_at_pmt_pos[5]/F"       );
-
+	TBranch * _bn_tpc_track_length_n		= dpd->Branch("tpc_track_length"		, _tpc_track_length_n		, "tpc_track_length[ntracks]/D"       );
+	TBranch * _bn_tpc_drift_time_at_pmt_pos	= dpd->Branch("tpc_drift_time_at_pmt_pos"		, _tpc_drift_time_at_pmt_pos		, "tpc_drift_time_at_pmt_pos[5]/D"       );
 
 
 	if (debug) cout << "Number of events: \t" << t2->GetEntries()  << endl;
-	
 
 	for(int ev=0; ev < t2->GetEntries() ; ++ev)
 	{		
+		//if (ev<258) continue;
+				//if (ev!=50 && ev!=58 && ev!=127) continue; // ev!=58 && ev!=127) continue;
+				
 		cout << "dpdMaker: Event = " << ev << endl;
 		
 		if (debug) cout << "lets check event "<< ev << " - ("<< _runcharge<<"," <<_subruncharge<< ","<< _event <<")" << endl;
@@ -165,14 +199,20 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 		if(ev%100==0) cout << ev << " over " <<t2->GetEntries()<<" events!" << endl;
 
  		t2->GetEntry(ev);
+		
+		
+		// calculate delta t
+		time_charge=(double)_eventtime_seconds-35.0+(double)_eventtime_nanoseconds*1e-9;
+		time_light=(double)_PCTimeTag[0]+(double)_PCTimeTag[2]*1e-3;
+		
+		if (debug)
+		{
+			cout << "\tTime: C_" << _eventtime_seconds << " L_" << _PCTimeTag[0] << endl;
+			cout << "\tTime C_ns_" << _eventtime_nanoseconds << " L_ms_" << _PCTimeTag[2] << endl;
+			cout << "\tdt: " <<time_charge-time_light << endl<< endl;
+		}
 
- 		TH1F *h[5];
-		if (debug) cout << "\tLight variables: Nsamples " << _nsamples  << "\t" << _time_sample<< endl;
-
-		for (int k=0; k<5; k++) h[k] = new TH1F(Form("%s%i","h",k),Form("%s%i%s","Channel ",k," ;Time [#mus]; Voltage [ADC counts]"),_nsamples,0.0,0.001*_nsamples*_time_sample);
-
-		if (debug) cout << "pmt histograms created " << ev << endl;
-
+ 		
 		//
 		// Charge stuff
 		//
@@ -181,7 +221,7 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 		view[0] = new TH2F("view0","View 0;Channel;Time",320,0,320,1667,0,1667);
 		view[1] = new TH2F("view1","View 1;Channel;Time",960,0,960,1667,0,1667);
 
-		float pmt_pos[5]={0};
+		double pmt_pos[N_PMT]={0};
 
 		pmt_pos[0]=150.0-92.246; // pmt position in Y coordinate (larsoft coordinate systems) in cm
 		pmt_pos[1]=150.0-46.123;
@@ -190,22 +230,22 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 		pmt_pos[4]=150.0+92.246;
 
 
-		float S2_width_tolerance_channel=5;//cm
+		double S2_width_tolerance_channel=5;//cm
 
-		float tpc_drift_time_at_pmt_pos[5]={0};
-		int tpc_drift_time_at_pmt_pos_counter[5]={0};
+		double tpc_drift_time_at_pmt_pos[N_PMT]={0};
+		int tpc_drift_time_at_pmt_pos_counter[N_PMT]={0};
 		//if (debug) cout << _no_hits << endl;
 
-		float totq=0;
-		float totrecoq=0;
-		float trackcharge[1000]={0};
+		double totq=0;
+		double totrecoq=0;
+		double trackcharge[1000]={0};
 		int number_reco_hits=0;
 	
 		TGraph *trackYX[kmaxntracks], *trackZX[kmaxntracks];
 		for (int j=0; j<_NumberOfTracks_pmtrack; j++) trackYX[j]= new TGraph();
 		for (int j=0; j<_NumberOfTracks_pmtrack; j++) trackZX[j]= new TGraph();
 	
-		//for (int j=0; j<_no_hits; j++)	if (debug) cout << "Ev "<<ev << " hit: " << j <<"/"<<_no_hits<< "  _charge:" <<  _Hit_ChargeIntegral[j] <<  endl;
+		//Dor (int j=0; j<_no_hits; j++)	if (debug) cout << "Ev "<<ev << " hit: " << j <<"/"<<_no_hits<< "  _charge:" <<  _Hit_ChargeIntegral[j] <<  endl;
 
 		if (debug) cout << "Charge Event "<<_event <<" - n.hits "<<_no_hits<< " - n.tracks " << _NumberOfTracks_pmtrack << endl;
 		for (int j=0; j<_no_hits; j++)
@@ -266,9 +306,21 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 
 		std::sort(  std::begin(sorted_tracks), std::end(sorted_tracks), [&](int i1, int i2) { return trackcharge[i1] > trackcharge[i2]; } );
 
-		//for (int j=0; j<_NumberOfTracks_pmtrack; j++) cout << "\t\tSorted track " << j << " " << sorted_tracks[j] << " " << trackcharge[sorted_tracks[j]] <<"IAC"<< endl;
-
+		//Dor (int j=0; j<_NumberOfTracks_pmtrack; j++) cout << "\t\tSorted track " << j << " " << sorted_tracks[j] << " " << trackcharge[sorted_tracks[j]] <<"IAC"<< endl;
+		
 		//cout << "\t... 3d tracks sorted." << endl;
+		
+		// count number of tracks passing some basic selection criteria
+		short NumberOfSelectedTracks=0;
+		for (int j=0; j<_NumberOfTracks_pmtrack; j++)
+		{
+			// track is greater than 100 cm and reconstructed end-points 
+			// must be closer than 2 cm to anode and cathode
+				if (_Track_Length_pmtrack[j]>100. && 
+					((fabs(_Track_StartX_pmtrack[j]-50.)<2. && fabs(_Track_EndX_pmtrack[j]+50.)<2.) || 
+					 (fabs(_Track_StartX_pmtrack[j]+50.)<2. && fabs(_Track_EndX_pmtrack[j]-50.)<2.)))
+							NumberOfSelectedTracks++;
+		} 
 
 		double t_yx_m[kmaxntracks], t_zx_m[kmaxntracks], t_yx_n[kmaxntracks], t_zx_n[kmaxntracks];
 		int fail_yx[kmaxntracks], fail_zx[kmaxntracks];
@@ -278,7 +330,7 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 		if (debug) for (int j=0; j<_NumberOfTracks_pmtrack; j++) cout << "TrackZX_m,n: "<< t_zx_m[j] << "  " << t_zx_n[j]<<endl;
 		if (debug) for (int j=0; j<_NumberOfTracks_pmtrack; j++) cout << "Fit Results: "<< fail_yx[j] << "  " << fail_zx[j]<<endl;
 		if (debug) for (int j=0; j<_NumberOfTracks_pmtrack; j++) cout << "Number of points in track " << j << ": "<< trackYX[j]->GetN() << ", " << trackZX[j]->GetN() << " totq = " <<trackcharge[j]<<endl;
-
+	
 	 //LeastSquareLinearFit(Int_t n, Double_t& constant, Double_t& slope, Int_t& ifail, Double_t xmin = 0, Double_t xmax = 0)
 		if (display_tracks) {
 			for (int j=0; j<_NumberOfTracks_pmtrack; j++)
@@ -308,7 +360,7 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 		{
 			if(_Hit_ChargeIntegral[j]==_Hit_ChargeIntegral[j])
 			{
-				for (int k=0; k<5; k++) if (_hit_trkid[j]==sorted_tracks[0]&&_Hit_View[j]==1 && (_Hit_Channel[j]-320)*300.0/960.0>pmt_pos[k]-S2_width_tolerance_channel && (_Hit_Channel[j]-320)*300.0/960.0<pmt_pos[k]+S2_width_tolerance_channel ) 
+				for (int k=0; k<N_PMT; k++) if (_hit_trkid[j]==sorted_tracks[0]&&_Hit_View[j]==1 && (_Hit_Channel[j]-320)*300.0/960.0>pmt_pos[k]-S2_width_tolerance_channel && (_Hit_Channel[j]-320)*300.0/960.0<pmt_pos[k]+S2_width_tolerance_channel ) 
 				{
 					tpc_drift_time_at_pmt_pos[k]+=0.4*_Hit_PeakTime[j];
 					tpc_drift_time_at_pmt_pos_counter[k]++;
@@ -317,106 +369,189 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 			}
 		}
 
-		for (int k=0; k<5; k++)
+		for (int k=0; k<N_PMT; k++)
 		{
 			if (tpc_drift_time_at_pmt_pos_counter[k]!=0) tpc_drift_time_at_pmt_pos[k]/=tpc_drift_time_at_pmt_pos_counter[k];
 			else tpc_drift_time_at_pmt_pos[k]=-1;
 		}
 
 
-		// calculate delta t
-		// MAL: This doesn't seem to work TODO
-		time_charge=(double)_eventtime_seconds-35.0+(double)_eventtime_nanoseconds*1e-9;
-		time_light=(double)_PCTimeTag[0]+(double)_PCTimeTag[2]*1e-3;
+		//
+		// Light stuff
+		//
+		
+ 		TH1F *h[N_PMT];
+		TH1F *h_plot[N_PMT];
+		double totlight[N_PMT+1]={0};
+		
+		if (debug) cout << "\tLight variables: Nsamples " << _nsamples  << "\t" << _time_sample<< endl;
 
-		if (debug)
+		for (int k=0; k<N_PMT; k++) 
 		{
-			cout << "\tTime: C_" << _eventtime_seconds << " L_" << _PCTimeTag[0] << endl;
-			cout << "\tdt: " <<time_charge-time_light << endl<< endl;
-		}
-		
-		float ped[5]={0};
-		float pedrms[5]={0};
-		float ped_end[5]={0};
-		float pedrms_end[5]={0};
-		
-		double totlight[6]={0};
-		//for (int k=0; k<5; k++)for (int j=0; j<_nsamples_2; j++) {cout << k << " " <<  j << " " <<  _adc_value_2[k][j] <<  endl;}
+			h[k] = new TH1F(Form("%s%i","h",k),Form("%s%i%s","Channel ",k," ;Time [#mus]; Voltage [ADC counts]"),_nsamples,0.0,0.001*_nsamples*_time_sample);
 
-		for (int k=0; k<5; k++) for (int j=0; j<_nsamples; j++) {h[k]->SetBinContent(j+1, _adc_value[k][j]); totlight[k]+= _adc_value[k][j];}
-		
-		for (int k=0; k<5; k++)	
-		{
-			WaveUtils wu;
-			if (_nsamples<=NSAMP_CUTOFF) 
+			for (int j=0; j<_nsamples; j++) 
 			{
-				ped[k] = wu.FindPedestal(*h[k], 10, 100); 
-				pedrms[k]=wu.GetPedestalRMS();
-				ped_end[k] = wu.FindPedestal(*h[k],h[k]->GetSize()-100,h[k]->GetSize()-10);
-				pedrms_end[k]=wu.GetPedestalRMS();
+				h[k]->SetBinContent(j+1, _adc_value[k][j]); 
+				totlight[k]+= _adc_value[k][j];
 			}
-			else 
+		}
+		if (debug) cout << "\tpmt histograms created " << ev << endl;
+		
+		
+		double ped[N_PMT]={0};
+		double pedrms[N_PMT]={0};
+		double ped_end[N_PMT]={0};
+		double ped_end_fit_m[N_PMT]={0};
+		double ped_end_fit_n[N_PMT]={0};
+		double ped_end_fit_chi2[N_PMT]={0};
+		int    ped_end_fit_ndof[N_PMT]={0};
+		double pedrms_end[N_PMT]={0};
+		
+		double ped_start = _nsamples==1000?0.0:210.;
+		double ped_stop  = _nsamples==1000?0.5:220.;
+		double ped_end_start = _nsamples==1000?3.5:910.;
+		double ped_end_stop  = _nsamples==1000?4.0:920.;
+		
+		int pedminbin = 10;		
+		int pedmaxbin =_nsamples==1000?100:1000;
+		
+		
+		int rebinfactor =_nsamples==1000?1:128;
+		double S1_mintime = _nsamples==1000?0.3:228;
+		double S1_maxtime = _nsamples==1000?0.65:231;
+		//double S1_maxtime = _nsamples==1000?0.65:234;	// used only for plotting S1		
+		
+		vector<int> pmt_valleys[N_PMT];
+		double pmt_valleys_tau[N_PMT][100];
+		
+		for (int k=0; k<N_PMT; k++)	
+		{
+			ped[k] = WaveformAnalysis::baseline(h[k],pedrms[k],h[k]->FindBin(ped_start),h[k]->FindBin(ped_stop)-1); // pedminbin,pedmaxbin);
+			ped_end[k] = WaveformAnalysis::baseline(h[k],pedrms_end[k],h[k]->FindBin(ped_end_start),h[k]->FindBin(ped_end_stop)-1); // _nsamples-pedmaxbin,_nsamples-pedminbin);
+						
+			h[k]->Sumw2();
+			h_plot[k] = dynamic_cast<TH1F*>(h[k]->Rebin(rebinfactor,Form("%s%i","h",k)));
+			//h_plot[k]->Sumw2();
+			h_plot[k]->Scale(1.0/rebinfactor);
+			
+			double thresh = ped[k]-15.*pedrms[k];
+			
+			pmt_valleys[k] = WaveformAnalysis::valleys(h_plot[k],thresh,1,h_plot[k]->FindBin(S1_maxtime));
+			for (int i=0; i<pmt_valleys[k].size(); i++) pmt_valleys_tau[k][i]=hcenter(h_plot[k],pmt_valleys[k].at(i));
+			
+			if (_nsamples>1000)
 			{
-				ped[k] = wu.FindPedestal(*h[k], 10, 1000); 
-				pedrms[k]=wu.GetPedestalRMS();
-				ped_end[k] = wu.FindPedestal(*h[k],h[k]->GetSize()-1000,h[k]->GetSize()-10);
-				pedrms_end[k]=wu.GetPedestalRMS();
+				//TF1* fit = new TF1("fit","pol1",800,1100);
+				TFitResultPtr res = h_plot[k]->Fit("pol1","QRMS","",900,1020);
+				ped_end_fit_n[k] = res->Parameter(0);
+				ped_end_fit_m[k] = res->Parameter(1);
+				ped_end_fit_chi2[k] = res->Chi2();
+				ped_end_fit_ndof[k] = res->Ndf();
+				
 			}
 			
 			if (debug) 
 			{ 
 				printf("ped[%i] = %0.2f +/- %0.2f\n", k, ped[k], pedrms[k]); 
 				printf("ped_end[%i] = %0.2f +/- %0.2f\n", k, ped_end[k], pedrms_end[k]); 
+				printf("ch: %d: threshold = %f\n",k,thresh);
+				printf("ch: %d: No of valleys: %lu\n",k,pmt_valleys[k].size());
+				for (int i=0; i<pmt_valleys[k].size(); i++) printf("\t%d: %d, %f\n",i,pmt_valleys[k].at(i),pmt_valleys_tau[k][i]);
 			}
+			if (0 && pmt_valleys[k].size()!=1) 
+			{
+				cout << "WARNING: " << pmt_valleys[k].size() << " valleys found! " << endl;
+				debug=true;
+				display_waveforms=true;
+			}
+			
+			//delete fit;
 
 			totlight[k]=-totlight[k]+ped[k]*_nsamples;
 		}
 
-		for (int k=0; k<5; k++)	{ totlight[5]+=totlight[k];}
+		for (int k=0; k<N_PMT; k++)	totlight[N_PMT]+=totlight[k];
 
 		//cout << "\t... integrating S1 for all PMTs."<< endl;
 		
-		float q;
-		q=(2.0/4096.0)*_time_sample*1e-9/(50.); // from iADC to Coulombs
-		float s1_width[5]={0.0};
-		float q_S1[5]={0.0};
-		int binpeak[5]={0};
-		float tau_S1[5]={0}; 
-		float tau_S2[5]={0}; 
-		float tau_S2_gaus[5]={0};
-		float tau_S2_error[5]={0};
-		float tau_S2_gaus_error[5]={0};
-		float amp_S1[5]={0.0};
-		for (int k=0; k<5; k++) q_S1[k]=q*get_S1full(h[k],s1_width[k], binpeak[k], ped[k]); // s1 in coulombs
-		for (int k=0; k<5; k++) tau_S1[k]=h[k]->GetBinCenter(binpeak[k]); // in microseconds
-		for (int k=0; k<5; k++) amp_S1[k]=(ped[k]-h[k]->GetBinContent(binpeak[k]))*2/4096; // in volts
-
-
-		// S2 calculation
+		double q=ADC_to_volts*_time_sample*1.e-9/(50.); // from iADC to Coulombs
 		
-		float q_S2[5]={0.0};
-		float q_S2_error[5]={0.0};
-		float amp_S2[5]={0.0};
-		float s2_width[5]={0};
-				
-		float q_S2_gaus[5]={0.0};
-		float q_S2_gaus_error[5]={0.0};
-		float amp_S2_gaus[5]={0.0};
-		float S2_gaus_width[5]={0};
 		
-		TH1F *h_plot[5];
+		int    binpeak_S1[N_PMT]={0};
+		int    endbin_S1[N_PMT]={0};
+		double q_S1[N_PMT]={0.0};
+		double q_S1_m2[N_PMT]={0.0};
+		double amp_S1[N_PMT]={0.0};
+		double width_S1[N_PMT]={0.0};
+		double tau_S1[N_PMT]={0};
+		double tau_S1_end[N_PMT]={0}; 
+		
+		for (int k=0; k<N_PMT; k++)
+		{
+			int S1_minbin=h[k]->FindBin(S1_mintime);
+			int S1_maxbin=h[k]->FindBin(S1_maxtime);
+			
+			//q_S1[k]=q*get_S1full(h[k],width_S1[k], binpeak_S1[k], ped[k]); // s1 in coulombs
+			//tau_S1[k]=h[k]->GetBinCenter(binpeak_S1[k]); // in microseconds
+			//amp_S1[k]=(ped[k]-h[k]->GetBinContent(binpeak_S1[k]))*ADC_to_volts; // in volts
+			//printf("Jose: q = %f, amp = %f, width=%f, tau=%f\n",1e6*q_S1[k],amp_S1[k],width_S1[k],tau_S1[k]);
+			
+			q_S1[k] = q*WaveformAnalysis::calc_S1_parameters(h[k],ped[k],binpeak_S1[k],width_S1[k],S1_minbin,S1_maxbin);
+			tau_S1[k] = hcenter(h[k],binpeak_S1[k]);
+			amp_S1[k] = ADC_to_volts*(ped[k]-hget(h[k],binpeak_S1[k]));
+			//printf("M1: q = %f, amp = %f, width=%f, tau=%f\n",1e6*q_S1[k],amp_S1[k],width_S1[k],tau_S1[k]);
+			
+			q_S1_m2[k]=q*WaveformAnalysis::calc_S1_charge_m2(h[k],ped[k],binpeak_S1[k],endbin_S1[k]); 
+			tau_S1_end[k] = hcenter(h[k],endbin_S1[k]);
+			//printf("M2: q = %f, tau_end = %f\n",1e6*q_S1_m2[k],tau_S1_end[k]);
+			
+			//printf("q_M1 = %f, q_M2 = %f, delta tau = %f\n", 1e6*q_S1[k],1e6*q_S1_m2[k],tau_S1_end[k]-tau_S1[k]);
+			
+			
+			
+		}
+
+		// S2 calculations
+		
+		int    binpeak_S2[N_PMT]={0};
+		double q_S2[N_PMT]={0.0};
+		double amp_S2[N_PMT]={0.0};
+		double width_S2[N_PMT]={0};
+		double tau_S2[N_PMT]={0}; 
+		
+		int	   binpeak_S2_gaus[N_PMT]={0};		
+		double q_S2_gaus[N_PMT]={0.0};
+		double amp_S2_gaus[N_PMT]={0.0};
+		double width_S2_gaus[N_PMT]={0};
+		double tau_S2_gaus[N_PMT]={0};
+		
+		int	   binpeak_S2_mike[N_PMT]={0};
+		int    binavg_S2_mike[N_PMT]={0};		
+		double q_S2_mike[N_PMT]={0.0};
+		double amp_S2_mike[N_PMT]={0.0};
+		double width_S2_mike[N_PMT]={0};
+		double tau_S2_mike[N_PMT]={0};
+		double tau_S2_avg[N_PMT]={0};
+		
+		//TH1F *h_plot[N_PMT];
 		
 		// only do calculation if sufficient nsamples
-		if (_nsamples>NSAMP_CUTOFF)
+		if (_nsamples>1000)
 		{
-			if (debug) cout << "\t... calculating S2 parameteres for all PMTs."<< endl;
+			if (debug) cout << "\t... calculating S2 parameters for all PMTs."<< endl;
 			
-			//for (int j=0; j<5; j++) q_S2[j]= ((2.0/4096.0)*1e-6/50)*get_S2_gaus(h_plot[j],s2_width[j], tau_S2[j], amp_S2[j], ped[j])
-			for (int j=0; j<5; j++)	q_S2[j]= q*get_S2(h[j],s2_width[j], tau_S2[j], amp_S2[j],binpeak[j],s1_width[j],ped[j]);
+			//Dor (int j=0; j<5; j++) q_S2[j]= ((2.0/4096.0)*1e-6/50)*get_S2_gaus(h_plot[j],s2_width[j], tau_S2[j], amp_S2[j], ped[j])
+			for (int k=0; k<N_PMT; k++)	
+			{
+				//q_S2[k]= q*get_S2(h[k],width_S2[k],tau_S2[k],amp_S2[k],binpeak_S1[k],width_S1[k],ped[k]);
+				//printf("Jose: q = %f, amp = %f, tau=%f\n",1e6*q_S2[k],amp_S2[k],tau_S2[k]);
+			}
 			
 			if (debug) cout << "\t... rebinning wf histogram for plotting / S2 calculation."<< endl;
 			
-			for (int k=0; k<5; k++)
+			/*
+			for (int k=0; k<N_PMT; k++)
 			{
 				h[k]->Sumw2();
 				h_plot[k] = dynamic_cast<TH1F*>(h[k]->Rebin(128,Form("%s%i","h",k)));
@@ -426,10 +561,20 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 				h_plot[k]->GetYaxis()->SetTitleSize(0.04);
 				h_plot[k]->GetXaxis()->SetTitleSize(0.04);
 			}
+			*/
 			
 			if (debug) cout << "\t... calculating S2_gaus parameteres for all PMTs."<< endl;
 		
-			for (int j=0; j<5; j++)	q_S2_gaus[j]= ((2.0/4096.0)*1e-6/50.)*get_S2_gaus(h_plot[j],S2_gaus_width[j], tau_S2_gaus[j], amp_S2_gaus[j],ped[j]);
+			for (int k=0; k<N_PMT; k++)	q_S2_gaus[k]= (ADC_to_volts*1e-6/50.)*get_S2_gaus(h_plot[k],width_S2_gaus[k], tau_S2_gaus[k], amp_S2_gaus[k],ped[k]);
+			
+			for (int k=0; k<N_PMT; k++)	
+			{
+				q_S2[k]= q*WaveformAnalysis::calc_S2_parameters(h[k],ped[k],binpeak_S1[k],binpeak_S2_mike[k],binavg_S2_mike[k]);
+				tau_S2[k] = hcenter(h[k],binpeak_S2_mike[k]);
+				tau_S2_avg[k] = hcenter(h[k],binavg_S2_mike[k]);
+				amp_S2[k] = ADC_to_volts*(ped[k]-hget(h[k],binpeak_S2_mike[k]));
+				//printf("Michael: q = %f, amp = %f, tau=%f, avg tau=%f\n",1e6*q_S2_mike[k],amp_S2_mike[k],tau_S2_mike[k],tau_S2_avg[k]);
+			}
 		}
 		
 	
@@ -437,10 +582,9 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 		{
 			cout << "\t... done."<< endl << endl;
 			
-			cout << "Light: (Run,ev): ("<<_run <<","<<_nevent <<") /ttotlight: " << totlight[5] << " " << _nsamples << endl;
+			cout << "Light: (Run,ev): ("<<_run <<","<<_nevent <<") /ttotlight: " << totlight[N_PMT] << " " << _nsamples << endl;
 			cout << "S1 light: " << q_S1[0]+q_S1[1]+q_S1[2]+q_S1[3]+q_S1[4] << " S2 light: " << q_S2[0]+q_S2[1]+q_S2[2]+q_S2[3]+q_S2[4]<< endl;
 			cout << "Time: charge: " << time_charge << ", light: " << time_light << ", delta: " << time_charge - time_light << endl;
-			printf("Double time: charge = %0.12e, light = %0.12e, delta = %0.6e\n",time_charge/1.E9,time_light/1.E9,time_charge/1.E9-time_light/1.E9);
 			cout << "Charge (Run,SubRun,ev): (" <<_runcharge << ","<< _subruncharge<<","<<_event<<") /t totcharge: "<<  totq <<endl; 
 			cout << "   Length: (";
 			for (Int_t i=0;i<_NumberOfTracks_pmtrack;i++)  cout << _Track_Length_pmtrack[i] << ", ";
@@ -453,25 +597,25 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 			cout <<"Pos2-WALL_CRT   = "<< _crt_track_pos1[0] << " "<<_crt_track_pos1[1] << " "<<_crt_track_pos1[2]  << endl;
 		}
 
-		float panel_space=100+20;
-		float det_dy = 7302.;
-		float y_center = (det_dy + panel_space*2)/2.;
+		double panel_space=100+20;
+		double det_dy = 7302.;
+		double y_center = (det_dy + panel_space*2)/2.;
 		y_center=1500;
-    	float z_center = (1910.+1930.)/2 + 112.*8;
-		float fc_zmin = 2129;
-		float fc_zmax = 2129+950;
+    	double z_center = (1910.+1930.)/2 + 112.*8;
+		double fc_zmin = 2129;
+		double fc_zmax = 2129+950;
 		z_center = (fc_zmin+fc_zmax)/2 ;
-		float fv_dz   = 950 + (618.08-418.08);
-		float fv_zmin = 2129 -(618.08-418.08);
-		float fv_zmax = fv_zmin + fv_dz;
+		double fv_dz   = 950 + (618.08-418.08);
+		double fv_zmin = 2129 -(618.08-418.08);
+		double fv_zmax = fv_zmin + fv_dz;
 		z_center = (fv_zmin+fv_zmax)/2;
 
-		float x1,y1,z1,x2,y2,z2;
-		float crtYX_m=0;
-		float crtYX_n=0;
+		double x1,y1,z1,x2,y2,z2;
+		double crtYX_m=0;
+		double crtYX_n=0;
 
-		float crtZX_m=0;
-		float crtZX_n=0;
+		double crtZX_m=0;
+		double crtZX_n=0;
 		TF1 *crtYX_line;
 		TF1 *crtZX_line;
 
@@ -513,155 +657,186 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 		//view[1]->Draw("colz");
 		//lets_pause();
 		
-		if (1)//totrecoq/totq > 0.3 && _NumberOfTracks_pmtrack==1)// && _crt_ToF<0) _crt_daq_match==1&&_crt_reco==1 
-		{
-			_run_out=_runcharge;
-			_subrun_out=_subruncharge;
-			_nev_out=_event;
-			_ntracks=_NumberOfTracks_pmtrack;
-			//cout << "_ntracks" << _ntracks << endl;
-
-			_time_charge = time_charge;
-			_time_light = time_light;
-
-			for (int k=0; k<5; k++) _pmt_wvf_properties[k][0]=ped[k];//ADC Counts
-			for (int k=0; k<5; k++) _pmt_wvf_properties[k][1]=pedrms[k]; //ADC Counts
+		//if (1)//totrecoq/totq > 0.3 && _NumberOfTracks_pmtrack==1)// && _crt_ToF<0) _crt_daq_match==1&&_crt_reco==1 
 			
-			for (int k=0; k<5; k++) _pmt_ped[k]=ped[k];
-			for (int k=0; k<5; k++) _pmt_ped_end[k]=ped_end[k];
-			for (int k=0; k<5; k++) _pmt_pedrms[k]=pedrms[k];
-			for (int k=0; k<5; k++) _pmt_pedrms_end[k]=pedrms_end[k];
+		_run_out=_runcharge;
+		_subrun_out=_subruncharge;
+		_nev_out=_event;
+		_ntracks=_NumberOfTracks_pmtrack;
+		_n_sel_tracks=NumberOfSelectedTracks;
+		//cout << "_ntracks" << _ntracks << endl;
+
+		_time_charge = time_charge;
+		_time_light = time_light;
 		
-			for (int k=0; k<6; k++) _pmt_charge[k]=(float)q*totlight[k];
-			for (int k=0; k<6; k++) _pmt_npe[k]=(float)q*totlight[k]/(1.602e-19)/gains[k];
-
-			for (int k=0; k<5; k++) _pmt_S1_charge[k]=q_S1[k]; // in volts
-			for (int k=0; k<5; k++) _pmt_S1_npe[k]=q_S1[k]/(1.602e-19)/gains[k];
-
-			_pmt_S1_charge[5]=0;
-			_pmt_S1_npe[5]=0;
-
-			for (int k=0; k<5; k++) _pmt_S1_charge[5]+=_pmt_S1_charge[k]; // in volts
-			for (int k=0; k<5; k++) _pmt_S1_npe[5]+=_pmt_S1_npe[k];
-
-			for (int k=0; k<5; k++) _pmt_S1_width[k]=s1_width[k]*_time_sample; // in ns
-			for (int k=0; k<5; k++) _pmt_S1_amp[k]=amp_S1[k]; // in volts
-			for (int k=0; k<5; k++) _pmt_S1_tau[k]=tau_S1[k]; // in us
-
-			for (int k=0; k<5; k++) _pmt_S2_charge[k]=q_S2[k];
-			for (int k=0; k<5; k++) _pmt_S2_npe[k]=q_S2[k]/(1.602e-19)/gains[k];
-			for (int k=0; k<5; k++) _pmt_S2_width[k]=s2_width[k]; // in us
-			for (int k=0; k<5; k++) _pmt_S2_amp[k]=amp_S2[k]; // in volts
-			for (int k=0; k<5; k++) _pmt_S2_tau[k]=tau_S2[k]; // in us
+		for (int k=0; k<N_PMT; k++) 
+		{
+			_pmt_wvf_properties[k][0]=ped[k];//ADC Counts
+			_pmt_wvf_properties[k][1]=pedrms[k]; //ADC Counts
+		
+			_pmt_ped[k]=ped[k];
+			_pmt_ped_end[k]=ped_end[k];
+			_pmt_ped_end_fit_m[k]=ped_end_fit_m[k];
+			_pmt_ped_end_fit_n[k]=ped_end_fit_n[k];
+			_pmt_ped_end_fit_chi2[k]=ped_end_fit_chi2[k];
+			_pmt_ped_end_fit_ndof[k]=ped_end_fit_ndof[k];
+			_pmt_pedrms[k]=pedrms[k];
+			_pmt_pedrms_end[k]=pedrms_end[k];
 			
-			for (int k=0; k<5; k++) _pmt_S2_gaus_charge[k]=q_S2_gaus[k];
-			for (int k=0; k<5; k++) _pmt_S2_gaus_npe[k]=q_S2_gaus[k]/(1.602e-19)/gains[k];
-			for (int k=0; k<5; k++) _pmt_S2_gaus_width[k]=S2_gaus_width[k]; // in us
-			for (int k=0; k<5; k++) _pmt_S2_gaus_amp[k]=amp_S2_gaus[k]; // in volts
-			for (int k=0; k<5; k++) _pmt_S2_gaus_tau[k]=tau_S2_gaus[k]; // in us
+			_pmt_npeaks[k] = pmt_valleys[k].size();
+			for (int i=0; i<_pmt_npeaks[k]; i++) _pmt_peaks_tau[k][i]=pmt_valleys_tau[k][i];
+	
+			_pmt_charge[k]=(double)q*totlight[k];
+			_pmt_npe[k]=(double)q*totlight[k]/(charge_e)/gains[k];
+
+			_pmt_S1_charge[k]=q_S1[k]; // in volts
+			_pmt_S1_npe[k]=q_S1[k]/(charge_e)/gains[k];
+			_pmt_S1_charge_m2[k]=q_S1_m2[k]; // in volts
+			_pmt_S1_npe_m2[k]=q_S1_m2[k]/(charge_e)/gains[k];
+
+			_pmt_S1_width[k]=width_S1[k]*_time_sample; // in ns
+			_pmt_S1_amp[k]=amp_S1[k]; // in volts
+			_pmt_S1_tau[k]=tau_S1[k]; // in us
+			_pmt_S1_tau_end[k]=tau_S1_end[k]; // in us
+
+			_pmt_S2_charge[k]=q_S2[k];
+			_pmt_S2_npe[k]=q_S2[k]/(charge_e)/gains[k];
+			_pmt_S2_width[k]=width_S2[k]; // in us
+			_pmt_S2_amp[k]=amp_S2[k]; // in volts
+			_pmt_S2_tau[k]=tau_S2[k]; // in us
+			_pmt_S2_tau_avg[k]=tau_S2_avg[k]; // in us
+		
+			_pmt_S2_gaus_charge[k]=q_S2_gaus[k];
+			_pmt_S2_gaus_npe[k]=q_S2_gaus[k]/(charge_e)/gains[k];
+			_pmt_S2_gaus_width[k]=width_S2_gaus[k]; // in us
+			_pmt_S2_gaus_amp[k]=amp_S2_gaus[k]; // in volts
+			_pmt_S2_gaus_tau[k]=tau_S2_gaus[k]; // in us
 			
-
-			_pmt_S2_charge[5]=0;
-			_pmt_S2_npe[5]=0;
-			for (int k=0; k<5; k++) _pmt_S2_charge[5]+=_pmt_S2_charge[k]; // in volts
-			for (int k=0; k<5; k++) _pmt_S2_npe[5]+=_pmt_S2_npe[k];
+			_tpc_drift_time_at_pmt_pos[k]=tpc_drift_time_at_pmt_pos[k];
+		}
+		
+		_pmt_S1_charge[N_PMT]=0;
+		_pmt_S1_npe[N_PMT]=0;
+		_pmt_S1_charge_m2[N_PMT]=0;
+		_pmt_S1_npe_m2[N_PMT]=0;
+		
+		_pmt_S2_charge[N_PMT]=0;
+		_pmt_S2_npe[N_PMT]=0;
+		
+		_pmt_S2_gaus_charge[N_PMT]=0;
+		_pmt_S2_gaus_npe[N_PMT]=0;
+		
+		for (int k=0; k<N_PMT; k++) 
+		{
+			_pmt_S1_charge[N_PMT]+=_pmt_S1_charge[k]; // in volts
+			_pmt_S1_npe[N_PMT]+=_pmt_S1_npe[k];
 			
-			_pmt_S2_gaus_charge[5]=0;
-			_pmt_S2_gaus_npe[5]=0;
-			for (int k=0; k<5; k++) _pmt_S2_gaus_charge[5]+=_pmt_S2_gaus_charge[k]; // in volts
-			for (int k=0; k<5; k++) _pmt_S2_gaus_npe[5]+=_pmt_S2_gaus_npe[k];
+			_pmt_S1_charge_m2[N_PMT]+=_pmt_S1_charge_m2[k]; // in volts
+			_pmt_S1_npe_m2[N_PMT]+=_pmt_S1_npe_m2[k];
 
-			_crt_mYX = crtYX_m;
-			_crt_mZX = crtZX_m;
-			_crt_nYX = crtYX_n;
-			_crt_nZX = crtZX_n;
+			_pmt_S2_charge[N_PMT]+=_pmt_S2_charge[k]; // in volts
+			_pmt_S2_npe[N_PMT]+=_pmt_S2_npe[k];
+		
+			_pmt_S2_gaus_charge[N_PMT]+=_pmt_S2_gaus_charge[k]; // in volts
+			_pmt_S2_gaus_npe[N_PMT]+=_pmt_S2_gaus_npe[k];
+		}
 
-			for (int k=0; k<5; k++)_tpc_drift_time_at_pmt_pos[k]=tpc_drift_time_at_pmt_pos[k];
-			_tpc_totcharge=totq;
-			_tpc_totrecocharge=totrecoq;
-//			_tpc_track_charge=trackcharge[0];
+		_crt_mYX = crtYX_m;
+		_crt_mZX = crtZX_m;
+		_crt_nYX = crtYX_n;
+		_crt_nZX = crtZX_n;
+		_crt_ToF_n = _crt_ToF;
+		_crt_track_lenFV_n = _crt_track_lenFV;
+		_crt_isFV_n = _crt_isFV;
+		
+		_tpc_totcharge=totq;
+		_tpc_totrecocharge=totrecoq;
 
-			for (int j=0; j<_NumberOfTracks_pmtrack; j++) _tpc_track_charge[j] = trackcharge[sorted_tracks[j]];
-			for (int j=0; j<_NumberOfTracks_pmtrack; j++) _tpc_track_fitresult_yx[j]=fail_yx[sorted_tracks[j]];
-			for (int j=0; j<_NumberOfTracks_pmtrack; j++) _tpc_track_fitresult_zx[j]=fail_zx[sorted_tracks[j]];
-			for (int j=0; j<_NumberOfTracks_pmtrack; j++) _tpc_mYX[j] = t_yx_m[sorted_tracks[j]];
-			for (int j=0; j<_NumberOfTracks_pmtrack; j++) _tpc_mZX[j] = t_zx_m[sorted_tracks[j]];
-			for (int j=0; j<_NumberOfTracks_pmtrack; j++) _tpc_nYX[j] = t_yx_n[sorted_tracks[j]];
-			for (int j=0; j<_NumberOfTracks_pmtrack; j++) _tpc_nZX[j] = t_zx_n[sorted_tracks[j]];
+		for (int j=0; j<_NumberOfTracks_pmtrack; j++) 
+		{
+			_tpc_track_charge[j] = trackcharge[sorted_tracks[j]];
+			_tpc_track_fitresult_yx[j]=fail_yx[sorted_tracks[j]];
+			_tpc_track_fitresult_zx[j]=fail_zx[sorted_tracks[j]];
+			_tpc_track_mYX[j] = t_yx_m[sorted_tracks[j]];
+			_tpc_track_mZX[j] = t_zx_m[sorted_tracks[j]];
+			_tpc_track_nYX[j] = t_yx_n[sorted_tracks[j]];
+			_tpc_track_nZX[j] = t_zx_n[sorted_tracks[j]];
+			_tpc_track_startX[j] = _Track_StartX_pmtrack[sorted_tracks[j]];
+			_tpc_track_endX[j] = _Track_EndX_pmtrack[sorted_tracks[j]];
+			_tpc_track_start_theta[j] = _Track_StartDirection_Theta_pmtrack[sorted_tracks[j]];
+			_tpc_track_start_phi[j] = _Track_StartDirection_Phi_pmtrack[sorted_tracks[j]];
+			_tpc_track_length_n[j] = _Track_Length_pmtrack[sorted_tracks[j]];
+		}
 
-			for (int j=0; j<_NumberOfTracks_pmtrack; j++) _tpc_startX[j] = _Track_StartX_pmtrack[sorted_tracks[j]];
-			for (int j=0; j<_NumberOfTracks_pmtrack; j++) _tpc_endX[j] = _Track_EndX_pmtrack[sorted_tracks[j]];
+		//Dor (int j=0; j<_NumberOfTracks_pmtrack; j++) cout << "TL: " <<  _tpc_track_nZX[j] << " " << t_zx_n[sorted_tracks[j]] << " " <<t_zx_n[j] << endl;
 
-
-			//for (int j=0; j<_NumberOfTracks_pmtrack; j++) cout << "TL: " <<  _tpc_nZX[j] << " " << t_zx_n[sorted_tracks[j]] << " " <<t_zx_n[j] << endl;
-
-			for (int j=0; j<_NumberOfTracks_pmtrack; j++) _Track_Length_n[j] = _Track_Length_pmtrack[sorted_tracks[j]];
-
-			//for (int j=0; j<_NumberOfTracks_pmtrack; j++) cout << "TL: " <<  sorted_tracks[j] << " " << _Track_Length_pmtrack[sorted_tracks[j]] << " " <<_Track_Length_pmtrack[j] << endl;
+		//Dor (int j=0; j<_NumberOfTracks_pmtrack; j++) cout << "TL: " <<  sorted_tracks[j] << " " << _tpc_track_length_pmtrack[sorted_tracks[j]] << " " <<_tpc_track_length_pmtrack[j] << endl;
 
 
 //			std::copy(std::begin(trackcharge), std::end(trackcharge), _tpc_track_charge);
-//			std::copy(std::begin(t_yx_m), std::end(t_yx_m), _tpc_mYX);
-//			std::copy(std::begin(t_zx_m), std::end(t_zx_m), _tpc_mZX);
-//			std::copy(std::begin(t_yx_n), std::end(t_yx_n), _tpc_nYX);
-//			std::copy(std::begin(t_zx_n), std::end(t_zx_n), _tpc_nZX);
+//			std::copy(std::begin(t_yx_m), std::end(t_yx_m), _tpc_track_mYX);
+//			std::copy(std::begin(t_zx_m), std::end(t_zx_m), _tpc_track_mZX);
+//			std::copy(std::begin(t_yx_n), std::end(t_yx_n), _tpc_track_nYX);
+//			std::copy(std::begin(t_zx_n), std::end(t_zx_n), _tpc_track_nZX);
 //			std::copy(std::begin(fail_yx), std::end(fail_yx), _tpc_track_fitresult_yx);
 //			std::copy(std::begin(fail_zx), std::end(fail_zx), _tpc_track_fitresult_zx);
 
-//			_tpc_mYX = t_yx_m[0];
-//			_tpc_mZX = t_zx_n[0];
-//			_tpc_nYX = t_yx_m[0];
-//			_tpc_nZX = t_zx_n[0];
+//			_tpc_track_mYX = t_yx_m[0];
+//			_tpc_track_mZX = t_zx_n[0];
+//			_tpc_track_nYX = t_yx_m[0];
+//			_tpc_track_nZX = t_zx_n[0];
 
-			dpd->Fill();
-			
+		dpd->Fill();
 		
-			// Wf displays				
-			if (display_waveforms)
+	
+		// Wf displays				
+		if (display_waveforms)
+		{
+			gStyle->SetOptStat(0);
+		    gStyle->SetPadTickX(1);
+		    gStyle->SetPadTickY(1);
+			
+			TCanvas *c1 = new TCanvas("c1","c1",1200,800);
+			c1->Divide(3,2);
+			for (int k=0; k<N_PMT; k++)
 			{
-				gStyle->SetOptStat(0);
-			    gStyle->SetPadTickX(1);
-			    gStyle->SetPadTickY(1);
+				c1->cd(k+1);
 				
-				TCanvas *c1 = new TCanvas("c1","c1",1200,800);
-				c1->Divide(3,2);
-				for (int k=0; k<5; k++)
-				{
-					c1->cd(k+1);
-					if (_nsamples<=NSAMP_CUTOFF) h[k]->Draw("HIST");
-					else h_plot[k]->Draw("HIST");
+				h_plot[k]->GetYaxis()->SetTitleOffset(1.25);
+				h_plot[k]->GetYaxis()->SetTitleSize(0.05);
+				h_plot[k]->GetXaxis()->SetTitleSize(0.05);
 				
-					float x = 0.35;
-					float y = 0.45;
-					TLatex l;
-					l.SetNDC();
-					l.DrawLatex(x,y+0.06,Form("Run %d, Event %d",_run_out,ev));
-					l.DrawLatex(x,y,Form("ped = %0.2f +/- %0.2f",ped[k],pedrms[k]));
-					l.DrawLatex(x,y-0.06,Form("ped_end = %0.2f +/- %0.2f",ped_end[k],pedrms_end[k]));
-					l.DrawLatex(x,y-0.12,Form("S1: %0.2f V, %0.1f ns, %0.1f #mus",_pmt_S1_amp[k],_pmt_S1_width[k],_pmt_S1_tau[k]));
-					if (_pmt_S2_amp[k]>0.) 
-					{
-						l.DrawLatex(x,y-0.18,Form("S2: %0.2f mV, %0.1f #mus, %0.1f #mus",_pmt_S2_amp[k]*1000.,_pmt_S2_width[k],_pmt_S2_tau[k]));
-						l.DrawLatex(x,y-0.24,Form("S2 gaus: %0.2f mV, %0.1f #mus, %0.1f #mus",_pmt_S2_gaus_amp[k]*1000.,_pmt_S2_gaus_width[k],_pmt_S2_gaus_tau[k]));
-					}	
-					//l.DrawLatex(x,y-0.30,Form("ped_diff = %0.2f",(ped_end[k]-ped[k])/pedrms[k]));
-				}
-				c1->Update();
-				c1->Modified();
-				//c1->Print(Form("working_v2/S1_amp_1/run%d_%d_ev%d.png",_run_out,_subrun_out,_event));	
-			}
-
-			if (debug || display_waveforms) lets_pause();
+				h[k]->Draw("HIST");
 			
+				double x = 0.15;
+				double y = 0.45;
+				TLatex l;
+				l.SetNDC();
+				l.DrawLatex(x,y+0.06,Form("Run %d, Event %d",_run_out,ev));
+				l.DrawLatex(x,y,Form("ped = %0.2f +/- %0.2f",ped[k],pedrms[k]));
+				l.DrawLatex(x,y-0.06,Form("ped_end = %0.2f +/- %0.2f",ped_end[k],pedrms_end[k]));
+				l.DrawLatex(x,y-0.12,Form("S1: %0.2f nC, %0.2f V, %0.1f ns, %0.1f #mus",1e9*_pmt_S1_charge[k],_pmt_S1_amp[k],_pmt_S1_width[k],_pmt_S1_tau[k]));
+				if (_pmt_S2_amp[k]>0.) 
+				{
+					l.DrawLatex(x,y-0.18,Form("S2: %0.2f uC, %0.2f mV, %0.1f #mus",1e6*_pmt_S2_charge[k],_pmt_S2_amp[k]*1000.,_pmt_S2_tau[k]));
+					l.DrawLatex(x,y-0.24,Form("S2 gaus: %0.2f uC, %0.2f mV, %0.1f #mus, %0.1f #mus",1e6*_pmt_S2_gaus_charge[k],_pmt_S2_gaus_amp[k]*1000.,_pmt_S2_gaus_width[k],_pmt_S2_gaus_tau[k]));
+					l.DrawLatex(x,y-0.30,Form("S2 mike: %0.2f uC, %0.2f mV, %0.1f #mus, %0.1f #mus",1e6*q_S2_mike[k],amp_S2_mike[k]*1000.,width_S2_mike[k],tau_S2_mike[k]));
+				}	
+				//l.DrawLatex(x,y-0.30,Form("ped_diff = %0.2f",(ped_end[k]-ped[k])/pedrms[k]));
+			}
+			c1->Update();
+			c1->Modified();
+			//c1->Print(Form("working_v2/S1_amp_1/run%d_%d_ev%d.png",_run_out,_subrun_out,_event));	
 		}
+
+		if (debug || display_waveforms) lets_pause();
 		
-		htime->Fill(time_charge-time_light);
-		hcorr->Fill(totq,totlight[5]);
-		for (int k=0; k<5; k++) 
-		{ 
-			h[k]->Delete(); 
-			if (h_plot[k]) h_plot[k]->Delete(); 
-		}
+		//debug=false;
+		//display_waveforms=false;
+
+		for (int k=0; k<N_PMT; k++) h[k]->Delete(); 
+		for (int k=0; k<N_PMT; k++) h_plot[k]->Delete(); 
+
 		view[0]->Delete();
 		view[1]->Delete();	
 
@@ -669,11 +844,5 @@ void make_dpd(int run, int subrun, float gains[5], string outfilename)
 
 	dpd->Write();
 
-	//htime->Draw("HIST");
-	//lets_pause();
-	//hcorr->Draw("colz");
-	//lets_pause();
-	//dpd->Draw("pmt_charge[5]:tpc_totcharge");
-	//lets_pause();
 }
 

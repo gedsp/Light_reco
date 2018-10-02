@@ -1,11 +1,11 @@
-#include "../LIB/mylib.h"
+#include "../LIB/pause.h"
 #include "../LIB/gains.h"
 
 #include "dpdMaker.h"
 #include "../config_reco.h"
 
 
-void get_voltages(int myRun, int mySubrun, float volts[N_PMT])
+void get_voltages(int myRun, int mySubrun, double volts[N_PMT])
 {
 	TFile *fdb = new TFile(db_file.c_str());
 	TTree *t = (TTree*)fdb->Get("ntuple");
@@ -45,8 +45,8 @@ void get_voltages(int myRun, int mySubrun, float volts[N_PMT])
 
 void dpdMaker(int run, int subrun)
 {
-	float voltages[N_PMT]={0};
-	float gains[N_PMT]={0};
+	double voltages[N_PMT]={0};
+	double gains[N_PMT]={0};
 	get_voltages(run,subrun,voltages);
 	get_gains(gains,voltages); // get gains of the pmts from the voltages.
 
@@ -56,7 +56,5 @@ void dpdMaker(int run, int subrun)
 	
 	//analyze the run and store the resulting ntuple in the file specified by the last argument
 	make_dpd(run,subrun,gains,outfile.Data()); 
-
-
 
 }
