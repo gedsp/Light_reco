@@ -393,7 +393,7 @@ double WaveformAnalysis::calc_S2_width(TH1* hist, double ped, double pedrms, dou
 	
 	double thresh = 10.*pedrms;
 		
-	for (int i=bin_S1; i<h->GetNbinsX()+1; i++) 
+	for (int i=bin_S1; i<bin_end; i++) 
 	{
 		if ((ped-hget(h,i))>thresh)
 		{
@@ -408,14 +408,11 @@ double WaveformAnalysis::calc_S2_width(TH1* hist, double ped, double pedrms, dou
 	}
 	
 	if (S2_start) t_start=hcenter(h,S2_start);
-	else t_start=0;
 	if (S2_end) t_end=hcenter(h,S2_end);
-	else t_end=0;
+	
+	if (t_end<t_start) width=0.;
+	else width=t_end-t_start;
 
-	width=t_end-t_start;
-	
-	//printf("ped = %0.2f +/- %0.2f, thresh = %0.1f, S2_start = %0.1f, S2_end = %0.1f, width = %0.1f\n",ped,pedrms,thresh,t_start,t_end,width);
-	
 	delete h;
 	
 	return width;
