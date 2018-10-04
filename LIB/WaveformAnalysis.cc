@@ -260,11 +260,19 @@ double WaveformAnalysis::calc_S1_charge(TH1* hist, double ped, double tau)
 double WaveformAnalysis::calc_S1_charge_m2(const TH1* hist, double ped, int binpeak, int &endbin)
 {
 	endbin=0;
+	
+	int rn=6; // 'rebin' factor
 
 	for (int i=binpeak; i<hist->GetNbinsX()+1; i++) 
 	{
 		//if ((ped-hget(h,i))<0.02*halfamp) { S1_end2=i; break; }
-		if (hget(hist,i)>ped) { endbin=i; break; }
+		if (hget(hist,i)>ped) 
+		{
+			double avg=0;
+			for (int j=i-rn; j<=i+rn; j++) avg+=hget(hist,j);
+			avg/=(2.*rn+1);
+			if (avg>ped) { endbin=i; break; }
+		}
 	}
 	
 	double tmin=hcenter(hist,binpeak);
@@ -344,7 +352,7 @@ double WaveformAnalysis::calc_S2_parameters(const TH1* hist, double ped, double 
 	
 	TH1F* h = (TH1F*)hist->Clone("htmp");
 	
-	double tstart_S2 = t_S1+0.95;
+	double tstart_S2 = t_S1+3.95;
 	double tend_S2 = 900.; 
 	int startbin = h->FindBin(tstart_S2);
 	int endbin = h->FindBin(tend_S2);
