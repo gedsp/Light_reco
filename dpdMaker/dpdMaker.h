@@ -29,8 +29,14 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 
 	double time_charge=0.0;
 	double time_light=0.0;
-
+	
 	TFile ofile(outfilename.c_str(),"RECREATE");
+	if (ofile.IsZombie())
+	{
+	       cout << "Error opening output file " << outfilename.c_str() << endl;
+	       exit(-1);
+	}
+
 	TTree *dpd= new TTree("dpd","result tree");
 
 	int _run_out;
@@ -58,9 +64,11 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 
 	double _pmt_S1_charge_1us[N_PMT+1];
 	double _pmt_S1_charge_4us[N_PMT+1];
+	double _pmt_S1_charge_80ns[N_PMT+1];
 	double _pmt_S1_charge_m2[N_PMT+1];
 	double _pmt_S1_npe_1us[N_PMT+1];
 	double _pmt_S1_npe_4us[N_PMT+1];
+	double _pmt_S1_npe_80ns[N_PMT+1];
 	double _pmt_S1_npe_m2[N_PMT+1];
 	double _pmt_S1_width[N_PMT];
 	double _pmt_S1_amp[N_PMT];
@@ -68,7 +76,9 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 	double _pmt_S1_tau_end[N_PMT];
 
 	double _pmt_S2_charge[N_PMT+1];
+	double _pmt_S2_charge_m2[N_PMT+1];
 	double _pmt_S2_npe[N_PMT+1];
+	double _pmt_S2_npe_m2[N_PMT+1];
 	double _pmt_S2_width[N_PMT];
 	double _pmt_S2_amp[N_PMT];
 	double _pmt_S2_tau[N_PMT];
@@ -149,9 +159,11 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 	
 	TBranch * _bn_pmt_S1_charge_1us	= dpd->Branch("pmt_S1_charge_1us"   ,_pmt_S1_charge_1us      , "pmt_S1_charge_1us[6]/D"   );
 	TBranch * _bn_pmt_S1_charge_4us	= dpd->Branch("pmt_S1_charge_4us"   ,_pmt_S1_charge_4us      , "pmt_S1_charge_4us[6]/D"   );
+	TBranch * _bn_pmt_S1_charge_80ns= dpd->Branch("pmt_S1_charge_80ns"   ,_pmt_S1_charge_80ns      , "pmt_S1_charge_80ns[6]/D"   );
 	TBranch * _bn_pmt_S1_charge_m2	= dpd->Branch("pmt_S1_charge_m2"   ,_pmt_S1_charge_m2      , "pmt_S1_charge_m2[6]/D"   );
 	TBranch * _bn_pmt_S1_npe_1us	= dpd->Branch("pmt_S1_npe_1us"   , _pmt_S1_npe_1us      , "pmt_S1_npe_1us[6]/D"   );
 	TBranch * _bn_pmt_S1_npe_4us	= dpd->Branch("pmt_S1_npe_4us"   , _pmt_S1_npe_4us      , "pmt_S1_npe_4us[6]/D"   );
+	TBranch * _bn_pmt_S1_npe_80ns	= dpd->Branch("pmt_S1_npe_80ns"   , _pmt_S1_npe_80ns      , "pmt_S1_npe_80ns[6]/D"   );
 	TBranch * _bn_pmt_S1_npe_m2		= dpd->Branch("pmt_S1_npe_m2"   , _pmt_S1_npe_m2      , "pmt_S1_npe_m2[6]/D"   );
 	TBranch * _bn_pmt_S1_width		= dpd->Branch("pmt_S1_width"   , _pmt_S1_width      , "pmt_S1_width[5]/D"   );
 	TBranch * _bn_pmt_S1_amp		= dpd->Branch("pmt_S1_amp"   , _pmt_S1_amp      , "pmt_S1_amp[5]/D"   );
@@ -159,7 +171,9 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 	TBranch * _bn_pmt_S1_tau_end	= dpd->Branch("pmt_S1_tau_end"   , _pmt_S1_tau_end      , "pmt_S1_tau_end[5]/D"   );
 
 	TBranch * _bn_pmt_S2_charge		= dpd->Branch("pmt_S2_charge"   ,_pmt_S2_charge      , "pmt_S2_charge[6]/D"   );
+	TBranch * _bn_pmt_S2_charge_m2	= dpd->Branch("pmt_S2_charge_m2"   ,_pmt_S2_charge_m2      , "pmt_S2_charge_m2[6]/D"   );
 	TBranch * _bn_pmt_S2_npe		= dpd->Branch("pmt_S2_npe"   , _pmt_S2_npe      , "pmt_S2_npe[6]/D"   );
+	TBranch * _bn_pmt_S2_npe_m2		= dpd->Branch("pmt_S2_npe_m2"   , _pmt_S2_npe_m2      , "pmt_S2_npe_m2[6]/D"   );
 	TBranch * _bn_pmt_S2_width		= dpd->Branch("pmt_S2_width"   , _pmt_S2_width      , "pmt_S2_width[5]/D"   );
 	TBranch * _bn_pmt_S2_amp		= dpd->Branch("pmt_S2_amp"   , _pmt_S2_amp      , "pmt_S2_amp[5]/D"   );
 	TBranch * _bn_pmt_S2_tau		= dpd->Branch("pmt_S2_tau"   , _pmt_S2_tau      , "pmt_S2_tau[5]/D"   );
@@ -352,6 +366,8 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 				c5->Modified();
 				c5->Update();
 				lets_pause();
+				
+				delete c5;
 			}
 		}
 
@@ -421,7 +437,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		int pedmaxbin =_nsamples==1000?100:1000;
 		
 		
-		int rebinfactor =_nsamples==1000?1:128;
+		int rebinfactor =_nsamples==1000?1:64;
 		double S1_mintime = _nsamples==1000?0.3:228;
 		double S1_maxtime = _nsamples==1000?0.65:231;	
 		
@@ -454,13 +470,22 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 			
 			if (_nsamples>1000)
 			{
-				//TF1* fit = new TF1("fit","pol1",800,1100);
+				TF1* fit = new TF1("fit","pol1",800,1100);
+				h_plot[k]->Fit("fit","QRMN","",900,1020);
+				ped_end_fit_n[k] = fit->GetParameter(0);
+				ped_end_fit_m[k] = fit->GetParameter(1);
+				ped_end_fit_chi2[k] = fit->GetChisquare();
+				ped_end_fit_ndof[k] = fit->GetNDF();
+				
+				delete fit;
+				
+				/*
 				TFitResultPtr res = h_plot[k]->Fit("pol1","QRMSN","",900,1020);
 				ped_end_fit_n[k] = res->Parameter(0);
 				ped_end_fit_m[k] = res->Parameter(1);
 				ped_end_fit_chi2[k] = res->Chi2();
 				ped_end_fit_ndof[k] = res->Ndf();
-				
+				*/
 			}
 			
 			if (debug) 
@@ -491,6 +516,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		int    endbin_S1[N_PMT]={0};
 		double q_S1_1us[N_PMT]={0.0};
 		double q_S1_4us[N_PMT]={0.0};
+		double q_S1_80ns[N_PMT]={0.0};
 		double q_S1_m2[N_PMT]={0.0};
 		double amp_S1[N_PMT]={0.0};
 		double width_S1[N_PMT]={0.0};
@@ -513,11 +539,12 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 			tau_S1[k] 	  = hcenter(h[k],binpeak_S1[k]);
 			amp_S1[k] 	  = ADC_to_volts*(ped[k]-hget(h[k],binpeak_S1[k]));
 			width_S1[k]   = _time_sample*WaveformAnalysis::calc_S1_width(h[k],binpeak_S1[k],ped[k]);
-			q_S1_1us[k]   = q*WaveformAnalysis::calc_S1_charge(h[k],ped[k],tau_S1[k]-0.05,tau_S1[k]+0.95);
-			q_S1_4us[k]   = q*WaveformAnalysis::calc_S1_charge(h[k],ped[k],tau_S1[k]-0.05,tau_S1[k]+3.95);
+			q_S1_1us[k]   = q*WaveformAnalysis::calc_S1_charge(h[k],ped[k],tau_S1[k]-0.05,tau_S1[k]+1.0);
+			q_S1_4us[k]   = q*WaveformAnalysis::calc_S1_charge(h[k],ped[k],tau_S1[k]-0.05,tau_S1[k]+4.0);
+			q_S1_80ns[k]  = q*WaveformAnalysis::calc_S1_charge(h[k],ped[k],tau_S1[k]-0.05,tau_S1[k]+0.08);
 			q_S1_m2[k]	  = q*WaveformAnalysis::calc_S1_charge_m2(h[k],ped[k],binpeak_S1[k],endbin_S1[k]); 
 			tau_S1_end[k] = hcenter(h[k],endbin_S1[k]);
-			
+	
 			//printf("S1: q_1us = %f, q_4us = %f, q_m2 = %f, width = %f, amp = %f, tau = %f, tau_end = %f\n", 
 			//1e6*q_S1_1us[k],1e6*q_S1_4us[k],1e6*q_S1_m2[k],width_S1[k],amp_S1[k],tau_S1[k],tau_S1_end[k]);
 		}
@@ -527,6 +554,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		int    binpeak_S2[N_PMT]={0};
 		int    binavg_S2[N_PMT]={0};
 		double q_S2[N_PMT]={0.0};
+		double q_S2_m2[N_PMT]={0.0};
 		double amp_S2[N_PMT]={0.0};
 		double width_S2[N_PMT]={0};
 		double tau_S2[N_PMT]={0}; 
@@ -559,7 +587,8 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 				tau_S2[k] 		= hcenter(h[k],binpeak_S2[k]);
 				tau_S2_avg[k] 	= hcenter(h[k],binavg_S2[k]);
 				amp_S2[k] 		= ADC_to_volts*(ped[k]-hget(h[k],binpeak_S2[k]));
-				width_S2[k] 	= WaveformAnalysis::calc_S2_width(h_plot[k],ped[k],pedrms[k],tau_S1[k],tau_S2_start[k],tau_S2_end[k]);
+				q_S2_m2[k]		= ((double)rebinfactor)*q*WaveformAnalysis::calc_S2_parameters_m2(h_plot[k],tau_S1[k],tau_S2_start[k],tau_S2_end[k],width_S2[k]);
+				
 				//printf("Michael: q = %f, amp = %f, tau=%f, avg tau=%f\n",1e6*q_S2_mike[k],amp_S2_mike[k],tau_S2_mike[k],tau_S2_avg[k]);
 			}
 		}
@@ -680,19 +709,23 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 
 			_pmt_S1_charge_1us[k]=q_S1_1us[k]; // in volts
 			_pmt_S1_charge_4us[k]=q_S1_4us[k]; // in volts
+			_pmt_S1_charge_80ns[k]=q_S1_80ns[k]; // in volts
 			_pmt_S1_charge_m2[k]=q_S1_m2[k]; // in volts
 			
 			_pmt_S1_npe_1us[k]=q_S1_1us[k]/(charge_e)/gains[k];
 			_pmt_S1_npe_4us[k]=q_S1_4us[k]/(charge_e)/gains[k];
+			_pmt_S1_npe_80ns[k]=q_S1_80ns[k]/(charge_e)/gains[k];
 			_pmt_S1_npe_m2[k]=q_S1_m2[k]/(charge_e)/gains[k];
-
+			
 			_pmt_S1_width[k]=width_S1[k]; // in ns
 			_pmt_S1_amp[k]=amp_S1[k]; // in volts
 			_pmt_S1_tau[k]=tau_S1[k]; // in us
 			_pmt_S1_tau_end[k]=tau_S1_end[k]; // in us
 
 			_pmt_S2_charge[k]=q_S2[k];
+			_pmt_S2_charge_m2[k]=q_S2_m2[k];
 			_pmt_S2_npe[k]=q_S2[k]/(charge_e)/gains[k];
+			_pmt_S2_npe_m2[k]=q_S2_m2[k]/(charge_e)/gains[k];
 			_pmt_S2_width[k]=width_S2[k]; // in us
 			_pmt_S2_amp[k]=amp_S2[k]; // in volts
 			_pmt_S2_tau[k]=tau_S2[k]; // in us
@@ -709,11 +742,17 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		_pmt_S1_charge_4us[N_PMT]=0;
 		_pmt_S1_npe_4us[N_PMT]=0;
 		
+		_pmt_S1_charge_80ns[N_PMT]=0;
+		_pmt_S1_npe_80ns[N_PMT]=0;
+		
 		_pmt_S1_charge_m2[N_PMT]=0;
 		_pmt_S1_npe_m2[N_PMT]=0;
 		
 		_pmt_S2_charge[N_PMT]=0;
 		_pmt_S2_npe[N_PMT]=0;
+		
+		_pmt_S2_charge_m2[N_PMT]=0;
+		_pmt_S2_npe_m2[N_PMT]=0;
 		
 		
 		for (int k=0; k<N_PMT; k++) 
@@ -724,11 +763,17 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 			_pmt_S1_charge_4us[N_PMT]+=_pmt_S1_charge_4us[k]; // in volts
 			_pmt_S1_npe_4us[N_PMT]+=_pmt_S1_npe_4us[k];
 			
+			_pmt_S1_charge_80ns[N_PMT]+=_pmt_S1_charge_80ns[k]; // in volts
+			_pmt_S1_npe_80ns[N_PMT]+=_pmt_S1_npe_80ns[k];
+			
 			_pmt_S1_charge_m2[N_PMT]+=_pmt_S1_charge_m2[k]; // in volts
 			_pmt_S1_npe_m2[N_PMT]+=_pmt_S1_npe_m2[k];
 
 			_pmt_S2_charge[N_PMT]+=_pmt_S2_charge[k]; // in volts
 			_pmt_S2_npe[N_PMT]+=_pmt_S2_npe[k];
+			
+			_pmt_S2_charge_m2[N_PMT]+=_pmt_S2_charge_m2[k]; // in volts
+			_pmt_S2_npe_m2[N_PMT]+=_pmt_S2_npe_m2[k];
 		}
 
 		_crt_mYX = crtYX_m;
@@ -780,6 +825,8 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		dpd->Fill();
 		
 	
+		TCanvas *c1;
+		
 		// Wf displays				
 		if (display_waveforms)
 		{
@@ -787,7 +834,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		    gStyle->SetPadTickX(1);
 		    gStyle->SetPadTickY(1);
 			
-			TCanvas *c1 = new TCanvas("c1","c1",1200,800);
+			c1 = new TCanvas("c1","c1",1200,800);
 			c1->Divide(3,2);
 			for (int k=0; k<N_PMT; k++)
 			{
@@ -809,8 +856,8 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 				l.DrawLatex(x,y-0.12,Form("S1: %0.2f nC, %0.2f V, %0.1f ns, %0.1f #mus",1e9*_pmt_S1_charge_1us[k],_pmt_S1_amp[k],_pmt_S1_width[k],_pmt_S1_tau[k]));
 				if (_pmt_S2_amp[k]>0.) 
 				{
-					l.DrawLatex(x,y-0.18,Form("S2: %0.2f uC, %0.2f mV, %0.1f #mus",1e6*_pmt_S2_charge[k],_pmt_S2_amp[k]*1000.,_pmt_S2_width[k]));
-					l.DrawLatex(x,y-0.24,Form("S2: %0.2f #mus, %0.1f #mus",_pmt_S2_tau[k],_pmt_S2_tau_avg[k]));
+					l.DrawLatex(x,y-0.18,Form("S2: %0.2f uC, %0.2f mV, %0.1f #mus",1e6*_pmt_S2_charge[k],_pmt_S2_amp[k]*1000.,_pmt_S2_tau[k]));
+					l.DrawLatex(x,y-0.24,Form("S2_m2: %0.2f #mus, %0.1f #mus, %0.1f #mus",_pmt_S2_tau_start[k],_pmt_S2_tau_end[k],_pmt_S2_width[k]));
 				}	
 				//l.DrawLatex(x,y-0.30,Form("ped_diff = %0.2f",(ped_end[k]-ped[k])/pedrms[k]));
 			}
@@ -821,18 +868,26 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 
 		if (debug || display_waveforms) lets_pause();
 		
+		if (c1) delete c1;
+		
 		//debug=false;
 		//display_waveforms=false;
 
-		for (int k=0; k<N_PMT; k++) h[k]->Delete(); 
-		for (int k=0; k<N_PMT; k++) h_plot[k]->Delete(); 
+		if (crtYX_line) crtYX_line->Delete();
+		if (crtZX_line) crtZX_line->Delete();
+		
+		for (int k=0; k<N_PMT; k++) if (h[k]) h[k]->Delete(); 
+		for (int k=0; k<N_PMT; k++) if (h_plot[k]) h_plot[k]->Delete(); 
 
-		view[0]->Delete();
-		view[1]->Delete();	
+		if (view[0]) view[0]->Delete();
+		if (view[1]) view[1]->Delete();
+		
+		for (int j=0; j<_NumberOfTracks_pmtrack; j++) if (trackYX[j]) trackYX[j]->Delete();
+		for (int j=0; j<_NumberOfTracks_pmtrack; j++) if (trackZX[j]) trackZX[j]->Delete();
 
 	} //event loop
 
 	dpd->Write();
-
+	ofile.Close();
 }
 
