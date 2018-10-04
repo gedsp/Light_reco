@@ -665,6 +665,9 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 			crtYX_line->SetLineColor(kRed);
 			crtZX_line->SetLineStyle(8);
 			crtYX_line->SetLineStyle(8);
+			
+			if (crtYX_line) crtYX_line->Delete();
+			if (crtZX_line) crtZX_line->Delete();
 		}
 		else _crt_matchreco=0;
 		//view[0]->Draw("colz");
@@ -873,9 +876,6 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		//debug=false;
 		//display_waveforms=false;
 
-		if (crtYX_line) crtYX_line->Delete();
-		if (crtZX_line) crtZX_line->Delete();
-		
 		for (int k=0; k<N_PMT; k++) if (h[k]) h[k]->Delete(); 
 		for (int k=0; k<N_PMT; k++) if (h_plot[k]) h_plot[k]->Delete(); 
 
