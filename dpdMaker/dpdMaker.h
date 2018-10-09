@@ -739,6 +739,9 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 			_tpc_drift_time_at_pmt_pos[k]=tpc_drift_time_at_pmt_pos[k];
 		}
 		
+		_pmt_charge[N_PMT]=0;
+		_pmt_npe[N_PMT]=0;
+		
 		_pmt_S1_charge_1us[N_PMT]=0;
 		_pmt_S1_npe_1us[N_PMT]=0;
 		
@@ -760,6 +763,9 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		
 		for (int k=0; k<N_PMT; k++) 
 		{
+			_pmt_charge[N_PMT]+=_pmt_charge[k];
+			_pmt_npe[N_PMT]+=_pmt_npe[k];
+		
 			_pmt_S1_charge_1us[N_PMT]+=_pmt_S1_charge_1us[k]; // in volts
 			_pmt_S1_npe_1us[N_PMT]+=_pmt_S1_npe_1us[k];
 			
