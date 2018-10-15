@@ -13,6 +13,8 @@ using namespace std;
 #define hcenter(h,i) h->GetXaxis()->GetBinCenter(i)
 #define verase(v,i) v.erase(v.begin()+i)
 
+double S2_max_time=900.;
+
 double WaveformAnalysis::baseline(const TH1* hist, double& rms, int binMin, int binMax)
 {
 
@@ -361,7 +363,7 @@ double WaveformAnalysis::calc_S2_corrected_charge(const TH1* hist, const TF1* fc
 	TH1F* h = (TH1F*)hist->Clone("htmp");
 	
 	double tstart_S2 = t_S1+4.0;
-	double tend_S2 = 900.; 
+	double tend_S2 = S2_max_time; 
 	int startbin = h->GetXaxis()->FindBin(tstart_S2);
 	int endbin = h->GetXaxis()->FindBin(tend_S2);
 	
@@ -385,7 +387,7 @@ double WaveformAnalysis::calc_S2_parameters(const TH1* hist, double ped, double 
 	TH1F* h = (TH1F*)hist->Clone("htmp");
 	
 	double tstart_S2 = t_S1+4.0;
-	double tend_S2 = 900.; 
+	double tend_S2 = S2_max_time; 
 	int startbin = h->GetXaxis()->FindBin(tstart_S2);
 	int endbin = h->GetXaxis()->FindBin(tend_S2);
 	
@@ -415,7 +417,7 @@ double WaveformAnalysis::calc_S2_parameters_m2(const TH1* hist, double t_S1, dou
 	double ped = WaveformAnalysis::baseline(hist,pedrms,hist->GetXaxis()->FindBin(218),hist->GetXaxis()->FindBin(228)-1); 
 	
 	int bin_S1 = hist->GetXaxis()->FindBin(t_S1+4.0);
-	int bin_end = hist->GetXaxis()->FindBin(900.);
+	int bin_end = hist->GetXaxis()->FindBin(S2_max_time);
 
 	int S2_start=0;
 	int S2_end=0;

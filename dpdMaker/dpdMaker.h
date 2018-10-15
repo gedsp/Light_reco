@@ -448,13 +448,10 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		double ped_end_start = _nsamples==1000?3.5:910.;
 		double ped_end_stop  = _nsamples==1000?4.0:920.;
 		
-		int pedminbin = 10;		
-		int pedmaxbin =_nsamples==1000?100:1000;
-		
-		
 		int rebinfactor =_nsamples==1000?1:64;
 		double S1_mintime = _nsamples==1000?0.3:228;
-		double S1_maxtime = _nsamples==1000?0.65:231;	
+		double S1_maxtime = _nsamples==1000?0.65:231;
+		double S2_maxtime = _nsamples==1000?4.0:900.;	
 		
 		vector<int> pmt_valleys[N_PMT];
 		double pmt_valleys_tau[N_PMT][NMAXPEAKS]={0};
@@ -483,7 +480,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 			for (int i=0; i<pmt_valleys[k].size(); i++) pmt_valleys_tau[k][i]=hcenter(h_plot[k],pmt_valleys[k].at(i));
 			*/
 			
-			pmt_valleys[k] = WaveformAnalysis::valleys(h_plot[k],1,h_plot[k]->FindBin(900.));
+			pmt_valleys[k] = WaveformAnalysis::valleys(h_plot[k],1,h_plot[k]->FindBin(S2_maxtime));
 			for (int i=0; i<pmt_valleys[k].size(); i++) pmt_valleys_tau[k][i]=hcenter(h_plot[k],pmt_valleys[k].at(i));
 			
 			if (debug) cout << "\t... fitting end of wf"<< endl;
