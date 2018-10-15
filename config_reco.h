@@ -19,5 +19,8 @@ const string dpd_dir = reco_dir+"/dpdMaker/dpd"; // local
 // full path to db file
 const string db_file = reco_dir+"/dbVoltages.root";
 
+// full path to pedestal correction file
+const string pc_file = reco_dir+"/PedestalCorrection.root";
+
 
 #endif

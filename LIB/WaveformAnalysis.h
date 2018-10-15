@@ -42,6 +42,8 @@ namespace WaveformAnalysis
 	  \return the histogram integral between these points (not taking the bin width into account)
 	*/
 	double integral_S2(const TH1* hist, double start, double end, double ped=0, bool doWeight=false);
+	
+	double integral_S2_corrected(const TH1* hist, const TF1* fc, double start, double end, double ped, double q);
 
 	/**Find a list of peaks between the given bin limits.  A peak here is 
 	   defined as the highest point in each pulse passing over the threshold.
@@ -61,7 +63,9 @@ namespace WaveformAnalysis
 	  \param maxBin the last bin to use
 	  \return a list of bins containing the minimum value of each pulse
 	*/
-	std::vector<int> valleys(const TH1* hist, double threshold, int minBin=-1,int maxBin=-1);
+	//std::vector<int> valleys(const TH1* hist, double threshold, int minBin=-1,int maxBin=-1);
+	
+	std::vector<int> valleys(const TH1* hist, int minBin=-1,int maxBin=-1);
 	
 	
 	// Returns (charge) integral of S1 (over pedestal) in the desired time range (in units of ADC*binwidth)
@@ -86,6 +90,8 @@ namespace WaveformAnalysis
 	// Returns absolute value (charge) integral of S2 over pedestal in the desired time range (in units of ADC*binwidth)
 	inline double calc_S2_charge_m2(const TH1* hist, double ped, double tstart, double tend) 
 		{ return integral_S2(hist,tstart,tend,ped); }
+	
+	double calc_S2_corrected_charge(const TH1* hist, const TF1* fcorr, double ped, double q, double t_S1);
 
 }
 

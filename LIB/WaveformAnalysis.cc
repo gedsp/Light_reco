@@ -90,6 +90,37 @@ double WaveformAnalysis::integral_S1(const TH1* hist, double start, double end, 
   return sum;
 }
 
+double WaveformAnalysis::integral_S2_corrected(const TH1* hist, const TF1* fc, double start, double end, double ped, double q)
+{
+    start = max(hist->GetXaxis()->GetXmin(),start);
+    end = min(hist->GetXaxis()->GetXmax(),end);
+    int startBin = hist->GetXaxis()->FindBin(start);
+    int endBin = hist->GetXaxis()->FindBin(end);
+
+    double startCenter = hcenter(hist,startBin);
+    double endCenter = hcenter(hist,endBin);
+  
+    double width = hist->GetXaxis()->GetBinWidth(1);
+
+    double sum = 0;
+  
+    double startBinFrac = (start-startCenter+0.5*width)/width;
+    double endBinFrac = (endCenter - 0.5*width-end)/width;
+  
+  	sum += ped-hget(hist,startBin) * startBinFrac;
+	for(int i = startBin+1; i<endBin; i++)
+	{
+		double ped_diff = fc->Eval(q*1.E6*sum);
+		double add = ped+ped_diff-hget(hist,i);
+		sum += add;
+	}
+	double ped_diff = fc->Eval(q*1.E6*sum);
+  	sum += (ped+ped_diff-hget(hist,endBin)) * endBinFrac;
+  	  
+    return sum;
+}
+
+
 double WaveformAnalysis::integral_S2(const TH1* hist, double start, double end, double ped=0, bool doWeight=false)
 {
   start = max(hist->GetXaxis()->GetXmin(),start);
@@ -165,6 +196,7 @@ vector<int> WaveformAnalysis::peaks(const TH1* hist, double threshold, int minBi
 
 }
 
+/*
 vector<int> WaveformAnalysis::valleys(const TH1* hist, double threshold, int minBin,int maxBin)
 {
 
@@ -189,98 +221,56 @@ vector<int> WaveformAnalysis::valleys(const TH1* hist, double threshold, int min
     lastV=v;
   }
   return p;
-
-}
-
-/*
-double WaveformAnalysis::calc_S1_charge(TH1* hist, double ped, double tau)
-{
-	double charge=0.;
-	double delta_tau_start=0.8;
-	double delta_tau_end=50.;
-	
-	TH1F* h = (TH1F*)hist->Clone("htmp");
-	
-	cout << "ped = " << ped << endl;
-	
-	TF1* fit = new TF1("fit","[0]-[1]*exp(-[2]/(x-[3]))",tau,tau+100.);
-	fit->SetParameter(0,ped);
-	fit->SetParameter(3,tau);
-	fit->SetParLimits(0,0.95*ped,4096);
-	fit->SetParLimits(3,tau-0.1,tau+0.1);
-	TFitResultPtr res2 = h->Fit(fit,"RMS","",tau+delta_tau_start,tau+delta_tau_end);
-	
-	// drawing
-	TCanvas *c2 = new TCanvas("c2","c2",1000,1000);
-	c2->Divide(2,2);
-	c2->cd(2);
-	h->GetXaxis()->SetRange(h->FindBin(tau+0.5),h->FindBin(tau+delta_tau_end+1.));
-	h->Draw("hist");
-	fit->SetLineColor(kRed);
-	fit->Draw("same");
-	
-	TLine lped,l1;
-	
-	c2->Update();
-	lped = TLine(gPad->GetUxmin(),ped,gPad->GetUxmax(),ped);
-	lped.SetLineColor(kBlack);
-	lped.SetLineStyle(2);
-	lped.Draw("same");
-	l1 = TLine(tau+1.,gPad->GetUymin(),tau+1,gPad->GetUymax());
-	l1.SetLineColor(kBlack);
-	l1.SetLineStyle(2);
-	l1.Draw("same");
-	c2->Modified();
-	c2->Update();
-	
-	c2->cd(1);
-	hist->GetXaxis()->SetRange(hist->FindBin(tau+0.5),hist->FindBin(tau+50));
-	hist->Draw("hist");
-	fit->Draw("same");
-	c2->Modified();
-	c2->Update();
-
-
-	h->GetXaxis()->SetRange(0,0);
-	
-	
-
-	charge = integral(h,tau-0.05,tau+0.95,ped);
-	double charge2 = integral(h,tau+0.95,tau+delta_tau_end,ped);
-	
-	TF1* fit_line = new TF1("fit_line","[0]",tau,tau+delta_tau_end);
-	fit_line->SetParameter(0,res2->Parameter(0));
-	//fit_line->SetParameter(1,res2->Parameter(1));
-	//fit_line->SetParameter(2,res2->Parameter(4));
-	TF1* fit_expo = new TF1("fit_expo","[0]*exp(-[1]/(x-[2]))",tau,tau+delta_tau_end);
-	fit_expo->SetParameter(0,fit->GetParameter(1));
-	fit_expo->SetParameter(1,fit->GetParameter(2));
-	fit_expo->SetParameter(2,fit->GetParameter(3));
-	
-	double int_line = fit_line->Integral(tau+0.95,tau+delta_tau_end)/4.E-3;
-	double int_expo = fit_expo->Integral(tau+0.95,tau+delta_tau_end)/4.E-3;
-	
-	printf("charge = %0.3e, charge2 = %0.3e, int_line = %0.3e, int_expo = %0.3e\n",charge,charge2,int_line,int_expo);	
-	
-	c2->cd(3);
-	fit_line->Draw();
-	c2->cd(4);
-	fit_expo->Draw();
-	
-	c2->Modified();
-	c2->Update();
-	
-	lets_pause();
-		
-	delete fit_line;
-	delete fit_expo;
-	delete fit;
-	delete h;
-
-	return charge;
 }
 */
 
+vector<int> WaveformAnalysis::valleys(const TH1* hist, int minBin,int maxBin)
+{
+  minBin = minBin<0?1:minBin;
+  maxBin = maxBin<0?hist->GetNbinsX():maxBin;
+  vector<int> p;
+  double v, lastV=hget(hist,minBin);
+  bool isInPeak = false;
+  int min=0;
+  double vmin=0;
+  for (int i = minBin; i<= maxBin; i++)
+  {
+    v = hget(hist,i);
+	double bw = hist->GetBinWidth(i);
+	double dvdt = (v-lastV)/bw;
+    if (dvdt<-60. && !isInPeak) { 
+		isInPeak=true; // sharp negative derivative found
+		min=i;
+		vmin=hget(hist,min);
+		int halfwidth=0;
+		for (int j=i+1; j<=i+6; j++) if (hget(hist,j)<vmin) min=j;
+		// now check if wf recovers up to 60% of peak height in subsequent 2 bins
+		for (int j=min+1; j<=min+3; j++) 
+		{
+			double ph=lastV-vmin;
+			//cout << "min at " << hcenter(hist,min) << endl;
+			//cout << "    j = " << j-min << ": " << (hget(hist,j)-hget(hist,min))/ph << endl;
+			if ((hget(hist,j)-vmin)>0.6*ph)
+			{
+				isInPeak=false;
+				p.push_back(min);
+				i=j;
+				v=hget(hist,i);
+				break;
+			}
+			isInPeak=false;
+		}
+	} 
+	
+    if (isInPeak){
+	  if (vmin<hget(hist,p[p.size()-1])) p[p.size()-1] = min;
+    }
+    
+    lastV=v;
+  }
+  return p;
+
+}
 
 
 double WaveformAnalysis::calc_S1_charge_m2(const TH1* hist, double ped, int binpeak, int &endbin)
@@ -361,6 +351,27 @@ double WaveformAnalysis::calc_S1_width(const TH1* hist, int binpeak, double ped)
 	width=(S1_end-1)-(S1_start+1)+deltax_start+deltax_end;
 	
 	return width;
+}
+
+
+double WaveformAnalysis::calc_S2_corrected_charge(const TH1* hist, const TF1* fcorr, double ped, double q, double t_S1)
+{
+	double charge=0;
+	
+	TH1F* h = (TH1F*)hist->Clone("htmp");
+	
+	double tstart_S2 = t_S1+4.0;
+	double tend_S2 = 900.; 
+	int startbin = h->GetXaxis()->FindBin(tstart_S2);
+	int endbin = h->GetXaxis()->FindBin(tend_S2);
+	
+	h->GetXaxis()->SetRange(startbin,endbin-1);
+	
+	charge = integral_S2_corrected(h,fcorr,tstart_S2,tend_S2,ped,q);
+	
+	delete h;
+	
+	return charge;
 }
 
 
