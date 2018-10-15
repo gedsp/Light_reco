@@ -218,7 +218,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 	if (debug) cout << "Number of events: \t" << t2->GetEntries()  << endl;
 
 	for(int ev=0; ev < t2->GetEntries() ; ++ev)
-	{		
+	{	
 		cout << "dpdMaker: Event = " << ev << endl;
 		
 		if (debug) cout << "lets check event "<< ev << " - ("<< _runcharge<<"," <<_subruncharge<< ","<< _event <<")" << endl;
@@ -448,7 +448,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		double ped_end_start = _nsamples==1000?3.5:910.;
 		double ped_end_stop  = _nsamples==1000?4.0:920.;
 		
-		int rebinfactor =_nsamples==1000?1:64;
+		int rebinfactor =_nsamples==1000?4:64;
 		double S1_mintime = _nsamples==1000?0.3:228;
 		double S1_maxtime = _nsamples==1000?0.65:231;
 		double S2_maxtime = _nsamples==1000?4.0:900.;	
@@ -483,10 +483,11 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 			pmt_valleys[k] = WaveformAnalysis::valleys(h_plot[k],1,h_plot[k]->FindBin(S2_maxtime));
 			for (int i=0; i<pmt_valleys[k].size(); i++) pmt_valleys_tau[k][i]=hcenter(h_plot[k],pmt_valleys[k].at(i));
 			
-			if (debug) cout << "\t... fitting end of wf"<< endl;
 			
 			if (_nsamples>1000 && (k==2 || k==3)) // only for positive-base PMTs
 			{
+				if (debug) cout << "\t... fitting end of wf"<< endl;
+				
 				/*
 				TF1* fit = new TF1("fit","pol1",800,1100);
 				h_plot[k]->Fit("fit","QRMN","",900,1020);
@@ -553,6 +554,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 				c1->Update();
 				lets_pause();
 				*/
+				
 
 			}
 			if (0 && pmt_valleys[k].size()!=1) 
@@ -622,7 +624,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 		double tau_S2_end[N_PMT]={0}; 
 		double tau_S2_avg[N_PMT]={0};
 		
-		// only do calculation if sufficient nsamples
+		// only do S2 calculation if sufficient nsamples
 		if (_nsamples>1000)
 		{
 			/*
@@ -774,7 +776,8 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 			_pmt_wvf_end_fit_ndof[k]=wvf_end_fit_ndof[k];
 			
 			_pmt_npeaks[k] = (pmt_valleys[k]).size();
-			for (int i=0; i<TMath::Min(_pmt_npeaks[k],NMAXPEAKS); i++) _pmt_peaks_tau[k][i]=pmt_valleys_tau[k][i]; 
+			//for (int i=0; i<TMath::Min(_pmt_npeaks[k],NMAXPEAKS); i++) _pmt_peaks_tau[k][i]=pmt_valleys_tau[k][i]; 
+			for (int i=0; i<NMAXPEAKS; i++) _pmt_peaks_tau[k][i]=pmt_valleys_tau[k][i];
 	
 			_pmt_charge[k]=(double)q*totlight[k];
 			_pmt_npe[k]=(double)q*totlight[k]/(charge_e)/gains[k];
@@ -910,7 +913,6 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 
 		dpd->Fill();
 		
-	
 		TCanvas *c1;
 		
 		// Wf displays	
@@ -954,7 +956,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 			c1->Modified();
 			//c1->Print(Form("working_v2/S1_amp_1/run%d_%d_ev%d.png",_run_out,_subrun_out,_event));	
 		}
-
+		
 		if (debug || display_waveforms) lets_pause();
 		
 		//if (c1) delete c1;
