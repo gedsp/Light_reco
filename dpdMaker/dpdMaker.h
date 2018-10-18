@@ -62,6 +62,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 	double _pmt_pedrms2[N_PMT];
 	double _pmt_ped_end[N_PMT];
 	double _pmt_pedrms_end[N_PMT];
+	int	   _pmt_wvf_ADC_sat[N_PMT];
 	double _pmt_wvf_end_fit_c0[N_PMT];
 	double _pmt_wvf_end_fit_c1[N_PMT];
 	double _pmt_wvf_end_fit_c2[N_PMT];
@@ -161,6 +162,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 	TBranch * _bn_pmt_pedrms2    	= dpd->Branch("pmt_pedrms2", _pmt_pedrms2   , "pmt_pedrms2[5]/D"   );
 	TBranch * _bn_pmt_ped_end   	= dpd->Branch("pmt_ped_end"   ,  _pmt_ped_end      , "pmt_ped_end[5]/D"   );
 	TBranch * _bn_pmt_pedrms_end   	= dpd->Branch("pmt_pedrms_end"   ,  _pmt_pedrms_end      , "pmt_pedrms_end[5]/D"   );
+	TBranch * _bn_pmt_wvf_ADC_sat  	= dpd->Branch("pmt_wvf_ADC_sat"   ,  _pmt_wvf_ADC_sat      , "pmt_wvf_ADC_sat[5]/I"   );
 	TBranch * _bn_pmt_wvf_end_fit_c0   	= dpd->Branch("pmt_wvf_end_fit_c0"   ,  _pmt_wvf_end_fit_c0      , "pmt_wvf_end_fit_c0[5]/D"   );
 	TBranch * _bn_pmt_wvf_end_fit_c1   	= dpd->Branch("pmt_wvf_end_fit_c1"   ,  _pmt_wvf_end_fit_c1      , "pmt_wvf_end_fit_c1[5]/D"   );
 	TBranch * _bn_pmt_wvf_end_fit_c2   	= dpd->Branch("pmt_wvf_end_fit_c2"   ,  _pmt_wvf_end_fit_c2      , "pmt_wvf_end_fit_c2[5]/D"   );
@@ -412,6 +414,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
  		TH1F *h[N_PMT];
 		TH1F *h_plot[N_PMT];
 		double totlight[N_PMT+1]={0};
+		int pmt_wvf_ADC_sat[N_PMT]={0};
 		
 		if (debug) cout << "\tLight variables: Nsamples " << _nsamples  << "\t" << _time_sample<< endl;
 
@@ -422,6 +425,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 			for (int j=0; j<_nsamples; j++) 
 			{
 				h[k]->SetBinContent(j+1, _adc_value[k][j]); 
+				if (_adc_value[k][j] <=0 || _adc_value[k][j]>=4095) pmt_wvf_ADC_sat[k]=1;
 				totlight[k]+= _adc_value[k][j];
 			}
 			h[k]->Sumw2();
@@ -501,13 +505,15 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 				
 				//gStyle->SetOptStat(0);
 				
+				double ped_diff = ped_end[k]-ped[k];
+				
 				TF1* fit = new TF1("fit","[0]+[1]*exp((900-x)/[2])",850,1100);
 				fit->SetParameter(0,ped[k]);
-				fit->SetParameter(1,ped_end[k]-ped[k]);
+				fit->SetParameter(1,ped_diff);
 				fit->SetParameter(2,250.);
-				fit->SetParLimits(0,3700,4100);
-				fit->SetParLimits(1,0,200);
-				fit->SetParLimits(2,0,2000);
+				fit->SetParLimits(0,0.9*ped[k],1.1*ped[k]);
+				fit->SetParLimits(1,0.9*ped_diff,1.1*ped_diff);
+				fit->SetParLimits(2,10.,3000);
 				h_plot[k]->Fit("fit","QRMN","",900,1040);
 				wvf_end_fit_c0[k] = fit->GetParameter(0);
 				wvf_end_fit_c1[k] = fit->GetParameter(1);
@@ -516,15 +522,22 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 				wvf_end_fit_ndof[k] = fit->GetNDF();
 				
 				/*
-				TCanvas *c1 = new TCanvas("c1");
+				if (pedrms_end[k]<2.0 && !pmt_wvf_ADC_sat[k] && wvf_end_fit_chi2[k]<4.0 && wvf_end_fit_c2[k]>20. && wvf_end_fit_c2[k]<1000)
+				{
+					printf("ped = %f, ped_diff = %f\n",ped[k],ped_end[k]-ped[k]);
+					printf("c0 = %f, c1 = %f, c2 = %f, chi2 = %f, pedend_rms = %f\n",wvf_end_fit_c0[k],wvf_end_fit_c1[k],wvf_end_fit_c2[k],wvf_end_fit_chi2[k],pedrms_end[k]);
 				
-				h_plot[k]->GetXaxis()->SetRange(h_plot[k]->FindBin(650),h_plot[k]->FindBin(1048));
-				h_plot[k]->Draw("hist");
-				fit->SetLineColor(kRed);
-				fit->Draw("same");
-				c1->Modified();
-				c1->Update();
-				lets_pause();
+					gStyle->SetOptStat(0);
+					TCanvas *c1 = new TCanvas("c1");
+					
+					h_plot[k]->GetXaxis()->SetRange(h_plot[k]->FindBin(650),h_plot[k]->FindBin(1048));
+					h_plot[k]->Draw("hist");
+					fit->SetLineColor(kRed);
+					fit->Draw("same");
+					c1->Modified();
+					c1->Update();
+					lets_pause();
+				}
 				*/
 				
 				delete fit;
@@ -769,6 +782,7 @@ void make_dpd(int run, int subrun, double gains[N_PMT], string outfilename)
 			_pmt_pedrms2[k]=pedrms2[k];
 			_pmt_ped_end[k]=ped_end[k];
 			_pmt_pedrms_end[k]=pedrms_end[k];
+			_pmt_wvf_ADC_sat[k]=pmt_wvf_ADC_sat[k];
 			_pmt_wvf_end_fit_c0[k]=wvf_end_fit_c0[k];
 			_pmt_wvf_end_fit_c1[k]=wvf_end_fit_c1[k];
 			_pmt_wvf_end_fit_c2[k]=wvf_end_fit_c2[k];
