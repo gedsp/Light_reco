@@ -92,36 +92,6 @@ double WaveformAnalysis::integral_S1(const TH1* hist, double start, double end, 
   return sum;
 }
 
-double WaveformAnalysis::integral_S2_corrected(const TH1* hist, const TF1* fc, double start, double end, double ped, double q)
-{
-    start = max(hist->GetXaxis()->GetXmin(),start);
-    end = min(hist->GetXaxis()->GetXmax(),end);
-    int startBin = hist->GetXaxis()->FindBin(start);
-    int endBin = hist->GetXaxis()->FindBin(end);
-
-    double startCenter = hcenter(hist,startBin);
-    double endCenter = hcenter(hist,endBin);
-  
-    double width = hist->GetXaxis()->GetBinWidth(1);
-
-    double sum = 0;
-  
-    double startBinFrac = (start-startCenter+0.5*width)/width;
-    double endBinFrac = (endCenter - 0.5*width-end)/width;
-  
-  	sum += ped-hget(hist,startBin) * startBinFrac;
-	for(int i = startBin+1; i<endBin; i++)
-	{
-		double ped_diff = fc->Eval(q*1.E6*sum);
-		double add = ped+ped_diff-hget(hist,i);
-		sum += add;
-	}
-	double ped_diff = fc->Eval(q*1.E6*sum);
-  	sum += (ped+ped_diff-hget(hist,endBin)) * endBinFrac;
-  	  
-    return sum;
-}
-
 
 double WaveformAnalysis::integral_S2(const TH1* hist, double start, double end, double ped=0, bool doWeight=false)
 {
@@ -146,27 +116,15 @@ double WaveformAnalysis::integral_S2(const TH1* hist, double start, double end, 
 	  endBinFrac*=(double)endBin;
   }
   
-  if (ped>0) 
+  sum += TMath::Abs(ped-hget(hist,startBin)) * startBinFrac;
+  sum += TMath::Abs(ped-hget(hist,endBin)) * endBinFrac;
+  for(int i = startBin+1; i<endBin; i++) 
   {
-	  sum += TMath::Abs(ped-hget(hist,startBin)) * startBinFrac;
-	  sum += TMath::Abs(ped-hget(hist,endBin)) * endBinFrac;
-	  for(int i = startBin+1; i<endBin; i++) 
-	  {
-		  double w = doWeight?i:1.;
-		  sum += w*TMath::Abs(ped-hget(hist,i));
-	  }
+	  double w = doWeight?i:1.;
+	  sum += w*TMath::Abs(ped-hget(hist,i));
   }
-  else
-  {
-	  sum += hget(hist,startBin) * startBinFrac;
-	  sum += hget(hist,endBin) * endBinFrac;
-	  for(int i = startBin+1; i<endBin; i++)
-	  {
-		  double w = doWeight?i:1.;
-		  sum += w*(hget(hist,i));
-	  }
-  }
-  
+
+
   return sum;
 }
 
@@ -356,24 +314,37 @@ double WaveformAnalysis::calc_S1_width(const TH1* hist, int binpeak, double ped)
 }
 
 
-double WaveformAnalysis::calc_S2_corrected_charge(const TH1* hist, const TF1* fcorr, double ped, double q, double t_S1)
+TH1F* WaveformAnalysis::correct_wvf_histo(const TH1* hist, double ped, double RC_c=284.7, double RC_d=254.5)
 {
-	double charge=0;
+	TH1F* hR = (TH1F*)hist->Clone("hR");
 	
-	TH1F* h = (TH1F*)hist->Clone("htmp");
+	for (int i=1; i<hR->GetNbinsX()+1; i++) hR->SetBinContent(i,hget(hR,i)-ped);
 	
-	double tstart_S2 = t_S1+4.0;
-	double tend_S2 = S2_max_time; 
-	int startbin = h->GetXaxis()->FindBin(tstart_S2);
-	int endbin = h->GetXaxis()->FindBin(tend_S2);
+	TH1F* hPMT = (TH1F*)hR->Clone("hPMT");
+	TH1F* hC   = (TH1F*)hR->Clone("hC");
 	
-	h->GetXaxis()->SetRange(startbin,endbin-1);
+	hC->SetBinContent(1,0.);
+	hPMT->SetBinContent(1,0.);
 	
-	charge = integral_S2_corrected(h,fcorr,tstart_S2,tend_S2,ped,q);
+	double dt = hPMT->GetBinWidth(1);
+	//cout << "dt = " << dt << endl;
+	for (int i=2; i<hPMT->GetNbinsX()+1; i++)
+	{
+		double vri=hget(hR,i);
+		double vri1=hget(hR,i-1);
+		double vpmti1=hget(hPMT,i-1);
+
+		double vci1 = hget(hC,i-1);
+		double vci=(vri<vri1)?vci1+dt/RC_c*(vpmti1-vci1):vci1+dt/RC_d*(vpmti1-vci1); 
+		double vpmti=vci+vri;
+		hC->SetBinContent(i,vci);
+		hPMT->SetBinContent(i,vpmti);
+	}
 	
-	delete h;
-	
-	return charge;
+	delete hR;
+	delete hC;
+		
+	return hPMT;
 }
 
 

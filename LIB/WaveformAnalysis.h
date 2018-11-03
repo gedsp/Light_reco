@@ -42,8 +42,6 @@ namespace WaveformAnalysis
 	  \return the histogram integral between these points (not taking the bin width into account)
 	*/
 	double integral_S2(const TH1* hist, double start, double end, double ped=0, bool doWeight=false);
-	
-	double integral_S2_corrected(const TH1* hist, const TF1* fc, double start, double end, double ped, double q);
 
 	/**Find a list of peaks between the given bin limits.  A peak here is 
 	   defined as the highest point in each pulse passing over the threshold.
@@ -91,7 +89,7 @@ namespace WaveformAnalysis
 	inline double calc_S2_charge_m2(const TH1* hist, double ped, double tstart, double tend) 
 		{ return integral_S2(hist,tstart,tend,ped); }
 	
-	double calc_S2_corrected_charge(const TH1* hist, const TF1* fcorr, double ped, double q, double t_S1);
+	TH1F* correct_wvf_histo(const TH1* hist, double ped, double RC_c, double RC_d);
 
 }
 
