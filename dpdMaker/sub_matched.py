@@ -32,7 +32,7 @@ if __name__ == "__main__":
     os.system("mkdir -p run/scripts")
     os.system("mkdir -p run/log")
     os.system("mkdir -p run/out")
-    os.system("mkdir -p dpd")
+    os.system("mkdir -p dpd/matched")
     
     myfiles=glob.glob(InputPath+"/*.root")
     
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         #    continue
             
         # write batch script
-        runName = "run-"+str(run)+"-"+str(subRun)
+        runName = "run-matched-"+str(run)+"-"+str(subRun)
         file = open("run/scripts/"+runName+".sh", 'w')
         sys.stdout = file
 
