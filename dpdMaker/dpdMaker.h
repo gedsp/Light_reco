@@ -733,9 +733,9 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 			
 			if (debug) cout << "\t... correcting wf histogram and calculating end pedestal" << endl;
 			
-			h_corr[k] = WaveformAnalysis::correct_wvf_histo(h[k],ped[k]);	
-			h_corr_p[k] = WaveformAnalysis::correct_wvf_histo(h[k],ped[k],313.8,313.8);	
-			h_corr_m[k] = WaveformAnalysis::correct_wvf_histo(h[k],ped[k],256.5,258.6);	
+			WaveformAnalysis::correct_wvf_histo(h[k],h_corr[k],ped[k]);	
+			WaveformAnalysis::correct_wvf_histo(h[k],h_corr_p[k],ped[k],313.8,313.8);	
+			WaveformAnalysis::correct_wvf_histo(h[k],h_corr_m[k],ped[k],256.5,258.6);	
 			
 			ped_end_corr[k] = WaveformAnalysis::baseline(h_corr[k],pedrms_end_corr[k],h[k]->FindBin(ped_end_start),h[k]->FindBin(ped_end_stop)-1); 
 			

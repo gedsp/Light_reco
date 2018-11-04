@@ -314,37 +314,37 @@ double WaveformAnalysis::calc_S1_width(const TH1* hist, int binpeak, double ped)
 }
 
 
-TH1F* WaveformAnalysis::correct_wvf_histo(const TH1* hist, double ped, double RC_c=284.7, double RC_d=254.5)
+void WaveformAnalysis::correct_wvf_histo(const TH1* hist, TH1F*& hcorr, double ped, double RC_c=284.7, double RC_d=254.5)
 {
 	TH1F* hR = (TH1F*)hist->Clone("hR");
 	
 	for (int i=1; i<hR->GetNbinsX()+1; i++) hR->SetBinContent(i,hget(hR,i)-ped);
 	
-	TH1F* hPMT = (TH1F*)hR->Clone("hPMT");
+	hcorr = (TH1F*)hR->Clone("hcorr");
 	TH1F* hC   = (TH1F*)hR->Clone("hC");
 	
 	hC->SetBinContent(1,0.);
-	hPMT->SetBinContent(1,0.);
+	hcorr->SetBinContent(1,0.);
 	
-	double dt = hPMT->GetBinWidth(1);
+	double dt = hcorr->GetBinWidth(1);
 	//cout << "dt = " << dt << endl;
-	for (int i=2; i<hPMT->GetNbinsX()+1; i++)
+	for (int i=2; i<hcorr->GetNbinsX()+1; i++)
 	{
 		double vri=hget(hR,i);
 		double vri1=hget(hR,i-1);
-		double vpmti1=hget(hPMT,i-1);
+		double vpmti1=hget(hcorr,i-1);
 
 		double vci1 = hget(hC,i-1);
 		double vci=(vri<vri1)?vci1+dt/RC_c*(vpmti1-vci1):vci1+dt/RC_d*(vpmti1-vci1); 
 		double vpmti=vci+vri;
 		hC->SetBinContent(i,vci);
-		hPMT->SetBinContent(i,vpmti);
+		hcorr->SetBinContent(i,vpmti);
 	}
 	
 	delete hR;
 	delete hC;
 		
-	return hPMT;
+	return;
 }
 
 

@@ -89,7 +89,7 @@ namespace WaveformAnalysis
 	inline double calc_S2_charge_m2(const TH1* hist, double ped, double tstart, double tend) 
 		{ return integral_S2(hist,tstart,tend,ped); }
 	
-	TH1F* correct_wvf_histo(const TH1* hist, double ped, double RC_c, double RC_d);
+	void correct_wvf_histo(const TH1* hist, TH1F*& hcorr, double ped, double RC_c, double RC_d);
 
 }
 
