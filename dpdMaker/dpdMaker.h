@@ -706,17 +706,32 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 		double pedrms_end[N_PMT]={0};
 		double pedrms_end_corr[N_PMT]={0};
 		
-		double ped_start = _nsamples==1000?0.0:218.;
-		double ped_stop  = _nsamples==1000?0.5:228.;
-		double ped2_start = _nsamples==1000?0.0:228.5;
-		double ped2_stop  = _nsamples==1000?0.5:229.;
-		double ped_end_start = _nsamples==1000?3.5:910.;
-		double ped_end_stop  = _nsamples==1000?4.0:920.;
+		double ped_start = 218.;
+		double ped_stop  = 228.;
+		double ped2_start = 228.5;
+		double ped2_stop  = 229.;
+		double ped_end_start = 910.;
+		double ped_end_stop  = 920.;
 		
-		int rebinfactor =_nsamples==1000?4:64;
-		double S1_mintime = _nsamples==1000?0.3:228;
-		double S1_maxtime = _nsamples==1000?0.65:231;
-		double S2_maxtime = _nsamples==1000?4.0:900.;	
+		int rebinfactor = 64;
+		double S1_mintime = 228;
+		double S1_maxtime = 231;
+		double S2_maxtime = 900.;	
+		
+		if (_nsamples<=1000)
+		{
+			ped_start = 0.0;
+			ped_stop  = 0.5;
+			ped2_start = 0.0;
+			ped2_stop  = 0.5;
+			ped_end_start = 3.5;
+			ped_end_stop  = 4.0;
+		
+			rebinfactor = 4;
+			S1_mintime = 0.3;
+			S1_maxtime = 0.65;
+			S2_maxtime = 4.0;	
+		}
 		
 		vector<int> pmt_valleys[N_PMT];
 		double pmt_valleys_tau[N_PMT][NMAXPEAKS]={0};

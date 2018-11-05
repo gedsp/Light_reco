@@ -39,7 +39,7 @@ bool get_voltages(const string dbfile, int myRun, int mySubrun=-1)
 			for (uint k=0; k<N_LEM; k++) { sum_lemu+=lemu[k]; sum_lemd+=lemd[k]; }
 			cout << "Sum of all LEMu voltages = " << sum_lemu << endl;
 			cout << "Sum of all LEMd voltages = " << sum_lemd << endl;
-			if (sum_lemd>1200. && sum_lemu>25.) lemsON=true;
+			if (sum_lemd>1500. && sum_lemu>25.) lemsON=true;
 			for (uint k=0; k<N_PMT; k++) voltages[k]=pmt[k];
 			printf("voltages = {");
 			for (int k=0; k<N_PMT; k++) printf("%0.2f,",voltages[k]);
