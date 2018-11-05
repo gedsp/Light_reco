@@ -753,7 +753,7 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 			*/
 			
 			pmt_valleys[k] = WaveformAnalysis::valleys(h_plot[k],1,h_plot[k]->FindBin(S2_maxtime));
-			for (int i=0; i<pmt_valleys[k].size(); i++) pmt_valleys_tau[k][i]=hcenter(h_plot[k],pmt_valleys[k].at(i));
+			for (int i=0; i<TMath::Min(NMAXPEAKS,(int)pmt_valleys[k].size()); i++) pmt_valleys_tau[k][i]=hcenter(h_plot[k],pmt_valleys[k].at(i));
 			
 			if (_nsamples>1000 && (k==2 || k==3)) // only for positive-base PMTs
 			{
@@ -825,7 +825,7 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 				printf("ped[%i] = %0.2f +/- %0.2f\n", k, ped[k], pedrms[k]); 
 				printf("ped_end[%i] = %0.2f +/- %0.2f\n", k, ped_end[k], pedrms_end[k]); 
 				printf("ch: %d: No of valleys: %lu\n",k,pmt_valleys[k].size());
-				for (int i=0; i<pmt_valleys[k].size(); i++) printf("\t%d: %d, %f\n",i,pmt_valleys[k].at(i),pmt_valleys_tau[k][i]);
+				for (int i=0; i<TMath::Min(NMAXPEAKS,(int)pmt_valleys[k].size()); i++) printf("\t%d: %d, %f\n",i,pmt_valleys[k].at(i),pmt_valleys_tau[k][i]);
 				
 				/*
 				gStyle->SetOptStat(0);
@@ -1038,7 +1038,7 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 			_pmt_wvf_end_fit_chi2[k]=wvf_end_fit_chi2[k];
 			_pmt_wvf_end_fit_ndof[k]=wvf_end_fit_ndof[k];
 			
-			_pmt_npeaks[k] = (pmt_valleys[k]).size();
+			_pmt_npeaks[k] = TMath::Min(NMAXPEAKS,(int)pmt_valleys[k].size());
 			//for (int i=0; i<TMath::Min(_pmt_npeaks[k],NMAXPEAKS); i++) _pmt_peaks_tau[k][i]=pmt_valleys_tau[k][i]; 
 			for (int i=0; i<NMAXPEAKS; i++) _pmt_peaks_tau[k][i]=pmt_valleys_tau[k][i];
 	
