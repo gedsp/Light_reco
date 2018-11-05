@@ -8,7 +8,7 @@ void IsZombie(int light_run)
 	if (ifile.IsZombie()) cout << "Run " << light_run << " is a zombie" << endl;
 	else
 	{
-		TChain *t = new TChain("midas_data");
+		TChain *t = new TChain("dpd");
 		t->Add(infilename);
 		cout << "Run " << light_run << ": " << t->GetEntries() << " events" << endl;
 		ifile.Close();
