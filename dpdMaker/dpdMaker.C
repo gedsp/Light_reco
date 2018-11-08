@@ -52,7 +52,7 @@ bool get_voltages(const string dbfile, int myRun, int mySubrun=-1)
 }
 
 
-void dpdMaker(int light_run)
+void dpdMaker(int light_run, int subrun, bool doLight)
 {
 	cout << "dpdMaker:: making DPD for light run " << light_run << endl;
 	
@@ -99,14 +99,21 @@ void dpdMaker(int light_run)
 	TChain * t = new TChain("midas_data");
 	t->Add(infilename);
 	
-	gSystem->Exec(Form("mkdir -p %s/light",dpd_dir.c_str()));	
-	TString outfile = Form("%s/light/dpd-light-%d.root",dpd_dir.c_str(),light_run);
+	gSystem->Exec(Form("mkdir -p %s/light",dpd_dir.c_str()));
+	TString outfile;
+	if (subrun>=0) outfile = Form("%s/light/dpd-light-%d-%d.root",dpd_dir.c_str(),light_run,subrun);
+	else outfile = outfile = Form("%s/light/dpd-light-%d.root",dpd_dir.c_str(),light_run);
+	
 	cout << "DPD outfile: " << outfile.Data() << endl;
 	
 	//analyze the run and store the resulting ntuple in the file specified by the last argument
-	make_dpd(t,light_run,gains,outfile.Data()); 
+	make_dpd(t,light_run,gains,outfile.Data(),subrun); 
 }
 
+void dpdMaker(int light_run)
+{	
+	dpdMaker(light_run,-1,true);
+}
 
 void dpdMaker(int charge_run, int subrun)
 {	

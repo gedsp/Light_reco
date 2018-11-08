@@ -13,9 +13,9 @@ static const int NMAXPEAKS=50;
 static const int KMAXNHITS=100000;
 static const int KMAXNTRACKS=1000;
 
-void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename);
+void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename, int light_subrun);
 
-void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
+void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename, int light_subrun=-1)
 {
 	bool doCharge = (TString(outfilename).Contains("matched"))?true:false;
 	
@@ -226,6 +226,8 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 	double _pmt_npe[N_PMT+1];
 	double _pmt_ped[N_PMT];
 	double _pmt_pedrms[N_PMT];
+	double _pmt_ped_corr[N_PMT];
+	double _pmt_pedrms_corr[N_PMT];
 	double _pmt_ped2[N_PMT];
 	double _pmt_pedrms2[N_PMT];
 	double _pmt_ped_end[N_PMT];
@@ -345,6 +347,8 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 	TBranch * _bn_pmt_npe			= dpd->Branch("pmt_npe"   , _pmt_npe      , "pmt_npe[6]/D"   );
 	TBranch * _bn_pmt_ped       	= dpd->Branch("pmt_ped"   ,  _pmt_ped      , "pmt_ped[5]/D"   );
 	TBranch * _bn_pmt_pedrms    	= dpd->Branch("pmt_pedrms", _pmt_pedrms   , "pmt_pedrms[5]/D"   );
+	TBranch * _bn_pmt_ped_corr     	= dpd->Branch("pmt_ped_corr"   ,  _pmt_ped_corr      , "pmt_ped_corr[5]/D"   );
+	TBranch * _bn_pmt_pedrms_corr  	= dpd->Branch("pmt_pedrms_corr", _pmt_pedrms_corr   , "pmt_pedrms_corr[5]/D"   );
 	TBranch * _bn_pmt_ped2       	= dpd->Branch("pmt_ped2"   ,  _pmt_ped2      , "pmt_ped2[5]/D"   );
 	TBranch * _bn_pmt_pedrms2    	= dpd->Branch("pmt_pedrms2", _pmt_pedrms2   , "pmt_pedrms2[5]/D"   );
 	TBranch * _bn_pmt_ped_end   	= dpd->Branch("pmt_ped_end"   ,  _pmt_ped_end      , "pmt_ped_end[5]/D"   );
@@ -416,7 +420,17 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 
 	if (debug) cout << "Number of events: \t" << t2->GetEntries()  << endl;
 
-	for(int ev=0; ev < t2->GetEntries() ; ++ev)
+
+	// file splitting for large light runs
+	int startEvent=0;
+	int lastEvent=t2->GetEntries();
+	if (light_subrun>=0)
+	{
+		startEvent=light_subrun*1000;
+		lastEvent=startEvent+1000;
+	}
+
+	for(int ev=startEvent; ev < lastEvent ; ++ev)
 	{	
 		cout << "dpdMaker: Event = " << ev << endl;
 		
@@ -694,6 +708,8 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 		
 		double ped[N_PMT]={0};
 		double pedrms[N_PMT]={0};
+		double ped_corr[N_PMT]={0};
+		double pedrms_corr[N_PMT]={0};
 		double ped2[N_PMT]={0};
 		double pedrms2[N_PMT]={0};
 		double ped_end[N_PMT]={0};
@@ -746,12 +762,13 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 			
 			ped_end[k] = WaveformAnalysis::baseline(h[k],pedrms_end[k],h[k]->FindBin(ped_end_start),h[k]->FindBin(ped_end_stop)-1); 
 			
-			if (debug) cout << "\t... correcting wf histogram and calculating end pedestal" << endl;
+			if (debug) cout << "\t... correcting wf histogram and re-calculating pedestal" << endl;
 			
 			WaveformAnalysis::correct_wvf_histo(h[k],h_corr[k],ped[k]);	
 			WaveformAnalysis::correct_wvf_histo(h[k],h_corr_p[k],ped[k],313.8,313.8);	
 			WaveformAnalysis::correct_wvf_histo(h[k],h_corr_m[k],ped[k],256.5,258.6);	
 			
+			ped_corr[k] = WaveformAnalysis::baseline(h_corr[k],pedrms_corr[k],h[k]->FindBin(ped_start),h[k]->FindBin(ped_stop)-1); 
 			ped_end_corr[k] = WaveformAnalysis::baseline(h_corr[k],pedrms_end_corr[k],h[k]->FindBin(ped_end_start),h[k]->FindBin(ped_end_stop)-1); 
 			
 			if (debug) cout << "\t... rebinning wf histogram for plotting and fitting"<< endl;
@@ -804,7 +821,8 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 				wvf_end_fit_ndof[k] = fit->GetNDF();
 				
 				/*
-				if (pedrms_end[k]<2.0 && !pmt_wvf_ADC_sat[k] && wvf_end_fit_chi2[k]<4.0 && wvf_end_fit_c2[k]>20. && wvf_end_fit_c2[k]<1000)
+				//if (pedrms_end[k]<2.0 && !pmt_wvf_ADC_sat[k] && wvf_end_fit_chi2[k]<4.0 && wvf_end_fit_c2[k]>20. && wvf_end_fit_c2[k]<1000)
+				if (0 && ped_diff>=20)
 				{
 					printf("ped = %f, ped_diff = %f\n",ped[k],ped_end[k]-ped[k]);
 					printf("c0 = %f, c1 = %f, c2 = %f, chi2 = %f, pedend_rms = %f\n",wvf_end_fit_c0[k],wvf_end_fit_c1[k],wvf_end_fit_c2[k],wvf_end_fit_chi2[k],pedrms_end[k]);
@@ -813,14 +831,17 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 					TCanvas *c1 = new TCanvas("c1");
 					
 					//h_plot[k]->GetXaxis()->SetRange(h_plot[k]->FindBin(650),h_plot[k]->FindBin(1048));
-					h_plot[k]->Draw("hist");
-					fit->SetLineColor(kRed);
-					fit->Draw("same");
+					h[k]->Draw("hist");
+					h_corr[k]->SetLineColor(kGreen+2);
+					h_corr[k]->Draw("hist.same");
+					//fit->SetLineColor(kRed);
+					//fit->Draw("same");
 					c1->Modified();
 					c1->Update();
 					lets_pause();
 				}
 				*/
+				
 				
 				
 				delete fit;
@@ -901,7 +922,7 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 			q_S1_4us[k]   = q*WaveformAnalysis::calc_S1_charge(h[k],ped[k],tau_S1[k]-0.05,tau_S1[k]+4.0);
 			q_S1_80ns[k]  = q*WaveformAnalysis::calc_S1_charge(h[k],ped[k],tau_S1[k]-0.05,tau_S1[k]+0.08);
 			q_S1_m2[k]	  = q*WaveformAnalysis::calc_S1_charge_m2(h[k],ped[k],binpeak_S1[k],endbin_S1[k]);
-			q_S1_4us_corr[k] = q*WaveformAnalysis::calc_S1_charge(h_corr[k],0.,tau_S1[k]-0.05,tau_S1[k]+4.0); 
+			q_S1_4us_corr[k] = q*WaveformAnalysis::calc_S1_charge(h_corr[k],ped_corr[k],tau_S1[k]-0.05,tau_S1[k]+4.0); 
 			tau_S1_end[k] = hcenter(h[k],endbin_S1[k]);
 	
 			//printf("S1: q_1us = %f, q_4us = %f, q_m2 = %f, width = %f, amp = %f, tau = %f, tau_end = %f\n", 
@@ -952,9 +973,9 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 				q_S2_m2[k]		= ((double)rebinfactor)*q*WaveformAnalysis::calc_S2_parameters_m2(h_plot[k],tau_S1[k],tau_S2_start[k],tau_S2_end[k],width_S2[k]);
 
 				int blah,blah2;
-				q_S2_corr[k]    = q*WaveformAnalysis::calc_S2_parameters(h_corr[k],0.,tau_S1[k],blah,blah2);
-				q_S2_corr_p[k]  = q*WaveformAnalysis::calc_S2_parameters(h_corr_p[k],0.,tau_S1[k],blah,blah2);
-				q_S2_corr_m[k]  = q*WaveformAnalysis::calc_S2_parameters(h_corr_m[k],0.,tau_S1[k],blah,blah2);
+				q_S2_corr[k]    = q*WaveformAnalysis::calc_S2_parameters(h_corr[k],ped_corr[k],tau_S1[k],blah,blah2);
+				q_S2_corr_p[k]  = q*WaveformAnalysis::calc_S2_parameters(h_corr_p[k],ped_corr[k],tau_S1[k],blah,blah2);
+				q_S2_corr_m[k]  = q*WaveformAnalysis::calc_S2_parameters(h_corr_m[k],ped_corr[k],tau_S1[k],blah,blah2);
 			}
 		}
 		
@@ -1040,6 +1061,8 @@ void make_dpd(TChain* t2, int runNum, double gains[N_PMT], string outfilename)
 		
 			_pmt_ped[k]=ped[k];
 			_pmt_pedrms[k]=pedrms[k];
+			_pmt_ped_corr[k]=ped_corr[k];
+			_pmt_pedrms_corr[k]=pedrms_corr[k];
 			_pmt_ped2[k]=ped2[k];
 			_pmt_pedrms2[k]=pedrms2[k];
 			_pmt_ped_end[k]=ped_end[k];
