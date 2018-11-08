@@ -1,16 +1,34 @@
+#include "TSystem.h"
+
 #include "../config_reco.h"
 
-void IsZombie(int light_run)
+void IsZombie(const string outfilename="zombies.txt")
 {	
-	TString infilename = Form("%s/light/dpd-light-%d.root",dpd_dir.c_str(),light_run);
 	
-	TFile ifile(infilename);
-	if (ifile.IsZombie()) cout << "Run " << light_run << " is a zombie" << endl;
-	else
+	TString dir = dpd_dir+"/light/";
+	void* dirp = gSystem->OpenDirectory(dir);
+	
+	const char* entry;
+	const char* filename[1500];
+	
+	const char* ext = ".root";
+	
+	Int_t n=0;
+	TString str;
+	
+    while((entry = (char*)gSystem->GetDirEntry(dirp))) {
+      str = entry;
+      if(str.EndsWith(ext)) 
+        filename[n++] = entry;
+    }
+	
+	ofstream myfile;
+	myfile.open(outfilename);
+
+    for (Int_t i = 0; i < n; i++)
 	{
-		TChain *t = new TChain("dpd");
-		t->Add(infilename);
-		cout << "Run " << light_run << ": " << t->GetEntries() << " events" << endl;
-		ifile.Close();
+		TFile ifile(gSystem->ConcatFileName(dir,filename[i]));
+		if (ifile.IsZombie()) myfile << filename[i] << endl;
 	}
+	myfile.close();
 }
