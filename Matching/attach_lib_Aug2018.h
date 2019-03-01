@@ -9,6 +9,7 @@
 #include <cstdlib>
 
 const int MAXLRUNS = 100;
+static const int MAXSAMPLES = 300000;
 
 void lets_pause();
 
@@ -46,13 +47,13 @@ void attach_charge_run(int runnum_C, int Lruns, int run_number_L[100],int Lstart
 void attach_light_charge(int run_number_L, int runnum_C, string ifile){
 
 	bool debug=true;
-	debug=false;
+	//debug=false;
 
 	std::system(Form("%s%s%i%s%s%s%s","cp -v ",indirC.c_str(),runnum_C,"/",ifile.c_str()," ",tempfolder.c_str()));
 
 
 
-	TFile *fin=TFile::Open(TString::Format("%s%s%08d%s",indirL.c_str(),"output",run_number_L,".root"),"READ"); //PMTrun file
+	TFile *fin=TFile::Open(TString::Format("%s%s%08d%s",indirL.c_str(),"output",run_number_L,"_reprocessed.root"),"READ"); //PMTrun file
 	
 	if (!fin || fin->IsZombie()) {
 	   cout <<"The file could not be opened!";
@@ -63,46 +64,123 @@ void attach_light_charge(int run_number_L, int runnum_C, string ifile){
 
 	//actual branches at the ntuple:
 
-	short _adc_value[5][300000]; //short or int!! check!
-	int _PCTimeTag[3];
-	int _nsamples;
-	int _time_stamp;
-    	int _nevent;
-    	int _nchannels;
-  	int _crt_daq_match;
-  	int _crt_reco;
-   	int _time_sample;
+	Int_t    _TimeStamp;
+	//Int_t    _TriggerTimeTag;
+	Int_t    _PCTimeTag[3];
+	Int_t    _nevent;
+	Int_t    _nchannels;
+	Int_t    _nsamples;
+	Int_t    _TimeSample;
+	//Int_t    _channel_nsat[8];
+	//Float_t  _channel_pedestal[8];
+	//Float_t  _channel_charge[8];
+	Int_t    _crt_daq_match;
+	Int_t    _crt_reco;
+	Int_t    _crt_reco_sat;
+	//Int_t    _crt_adc[4][32];
+	Int_t    _crt_SE_time[2];
+	//Int_t    _crt_TS_time[2];
+	//Int_t    _crt_nHitAllTot;
+	//Int_t    _crt_nHitTot;
+	//Int_t    _crt_nHitSatTot;
+	//Float_t  _crt_charge;
+	Float_t  _crt_ToF;
+	//Int_t    _crt_track_hits_id[4];
+	
+	Float_t  _crt_track_param[5];
+	Float_t  _crt_track_param_p[5];
+	Float_t  _crt_track_param_m[5];
+	Float_t  _crt_track_door[3];
+	Float_t  _crt_track_door_p[3];
+	Float_t  _crt_track_door_m[3];
+	Float_t  _crt_track_wall[3];
+	Float_t  _crt_track_wall_p[3];
+	Float_t  _crt_track_wall_m[3];
+	Float_t  _crt_pmt_dist[5];
+	Float_t  _crt_pmt_dist_p[5];
+	Float_t  _crt_pmt_dist_m[5];
+	Float_t  _crt_closest_coord[5][3];
+	Int_t    _crt_isclosestpoint;
+	Float_t  _crt_drift_len[5];
+	Float_t  _crt_drift_len_p[5];
+	Float_t  _crt_drift_len_m[5];
+	Int_t    _crt_isFV;
+	Float_t  _crt_point_door_fv[3];
+	Float_t  _crt_point_door_fv_p[3];
+	Float_t  _crt_point_door_fv_m[3];
+	Float_t  _crt_point_wall_fv[3];
+	Float_t  _crt_point_wall_fv_p[3];
+	Float_t  _crt_point_wall_fv_m[3];
+	Int_t    _crt_isFC;
+	Float_t  _crt_point_door_fc[3];
+	Float_t  _crt_point_door_fc_p[3];
+	Float_t  _crt_point_door_fc_m[3];
+	Float_t  _crt_point_wall_fc[3];
+	Float_t  _crt_point_wall_fc_p[3];
+	Float_t  _crt_point_wall_fc_m[3];
 
-	TBranch * _b_time_stamp;  	t->SetBranchAddress("TimeStamp"   , &_time_stamp   , &_b_time_stamp  );
-	//TBranch * _b_time_stamp;  t->SetBranchAddress("TimeStamp"   , &_time_stamp   , &_b_time_stamp  );
-	TBranch * _b_event;	  	t->SetBranchAddress("event"       , &_nevent       , &_b_event       );
-	TBranch * _b_nchannels;   	t->SetBranchAddress("nchannels"   , &_nchannels    , &_b_nchannels   );
-	TBranch * _b_time_sample; 	t->SetBranchAddress("TimeSample"  , &_time_sample  , &_b_time_sample );
-	TBranch * _b_nsamples;	  	t->SetBranchAddress("nsamples"    , &_nsamples     , &_b_nsamples    );	
-	TBranch * _b_adc_value_0; 	t->SetBranchAddress("adc_value_0" , _adc_value[0]  , &_b_adc_value_0 );
-	TBranch * _b_adc_value_1; 	t->SetBranchAddress("adc_value_1" , _adc_value[1]  , &_b_adc_value_1 );
-	TBranch * _b_adc_value_2; 	t->SetBranchAddress("adc_value_2" , _adc_value[2]  , &_b_adc_value_2 );
-	TBranch * _b_adc_value_3; 	t->SetBranchAddress("adc_value_3" , _adc_value[3]  , &_b_adc_value_3 );
-	TBranch * _b_adc_value_4; 	t->SetBranchAddress("adc_value_4" , _adc_value[4]  , &_b_adc_value_4 );
-	TBranch * _b_PCTimeTag;   	t->SetBranchAddress("PCTimeTag"   , _PCTimeTag     , &_b_PCTimeTag   );
-	TBranch * _b_crt_daq_match;	t->SetBranchAddress("crt_daq_match"	, &_crt_daq_match	, &_b_crt_daq_match   );
-	TBranch * _b_crt_reco;	t->SetBranchAddress("crt_reco"	, &_crt_reco	, &_b_crt_reco   );
-	TBranch * _b_crt_adc      ; int    _crt_adc[4][32]      ; t->SetBranchAddress("crt_adc"       , _crt_adc          , &_b_crt_adc       );
+	Short_t  _adc_value[5][300000];
 
-	TBranch * _b_crt_track_pos0      ; float    _crt_track_pos0[3]     ; t->SetBranchAddress("crt_track_pos0"       , _crt_track_pos0          , &_b_crt_track_pos0       );
-	TBranch * _b_crt_track_pos1      ; float    _crt_track_pos1[3]     ; t->SetBranchAddress("crt_track_pos1"       , _crt_track_pos1          , &_b_crt_track_pos1       );
-	TBranch * _b_crt_ToF     ; float    _crt_ToF     ; t->SetBranchAddress("crt_ToF"       , &_crt_ToF         , &_b_crt_ToF       );
+	TBranch        *b_TimeStamp; t->SetBranchAddress("TimeStamp", &_TimeStamp, &b_TimeStamp);   
+	//TBranch        *b_TriggerTimeTag; t->SetBranchAddress("TriggerTimeTag", &TriggerTimeTag, &b_TriggerTimeTag);   
+	TBranch        *b_PCTimeTag; t->SetBranchAddress("PCTimeTag", _PCTimeTag, &b_PCTimeTag);   
+	TBranch        *b_nevent; t->SetBranchAddress("event", &_nevent, &b_nevent); 
+	TBranch        *b_nchannels; t->SetBranchAddress("nchannels", &_nchannels, &b_nchannels);    
+	TBranch        *b_nsamples;  t->SetBranchAddress("nsamples", &_nsamples, &b_nsamples);  
+	TBranch        *b_TimeSample; t->SetBranchAddress("TimeSample", &_TimeSample, &b_TimeSample);   
+	//TBranch        *b_channel_nsat; t->SetBranchAddress("channel_nsat", channel_nsat, &b_channel_nsat);
+	//TBranch        *b_channel_pedestal; t->SetBranchAddress("channel_pedestal", channel_pedestal, &b_channel_pedestal);   
+	//TBranch        *b_channel_charge; t->SetBranchAddress("channel_charge", channel_charge, &b_channel_charge);  
+	TBranch        *b_crt_daq_match; t->SetBranchAddress("crt_daq_match", &_crt_daq_match, &b_crt_daq_match);   
+	TBranch        *b_crt_reco; t->SetBranchAddress("crt_reco", &_crt_reco, &b_crt_reco); 
+	TBranch        *b_crt_reco_sat; t->SetBranchAddress("crt_reco_sat", &_crt_reco_sat, &b_crt_reco_sat);   
+	//TBranch        *b_crt_adc;  t->SetBranchAddress("crt_adc", crt_adc, &b_crt_adc);  
+	TBranch        *b_crt_SE_time; t->SetBranchAddress("crt_SE_time", _crt_SE_time, &b_crt_SE_time);   
+	//TBranch        *b_crt_TS_time; t->SetBranchAddress("crt_TS_time", crt_TS_time, &b_crt_TS_time);    
+	//TBranch        *b_crt_nHitAllTot; t->SetBranchAddress("crt_nHitAllTot", &_crt_nHitAllTot, &b_crt_nHitAllTot);  
+	//TBranch        *b_crt_nHitTot; t->SetBranchAddress("crt_nHitTot", &_crt_nHitTot, &b_crt_nHitTot);    
+	//TBranch        *b_crt_nHitTot; t->SetBranchAddress("crt_nHitSatTot", &_crt_nHitSatTot, &b_crt_nHitTot);   
+	//TBranch        *b_crt_charge; t->SetBranchAddress("crt_charge", &_crt_charge, &b_crt_charge);    
+	TBranch        *b_crt_ToF; t->SetBranchAddress("crt_ToF", &_crt_ToF, &b_crt_ToF);  
+	//TBranch        *b_crt_track_hits_id; t->SetBranchAddress("crt_track_hits_id", crt_track_hits_id, &b_crt_track_hits_id);
 
-TBranch * _b_crt_track_hits_id   ; int    _crt_track_hits_id[4]   ; t->SetBranchAddress("crt_track_hits_id"   , _crt_track_hits_id       , &_b_crt_track_hits_id       );
-TBranch * _b_crt_track_param     ; float  _crt_track_param[2]     ; t->SetBranchAddress("crt_track_param"     , _crt_track_param         , &_b_crt_track_param       );
-//TBranch * _b_crt_track_pos0      ; float  _crt_track_pos0[3]      ; t->SetBranchAddress("crt_track_pos0"      , _crt_track_pos0          , &_b_crt_track_pos0       );
-//TBranch * _b_crt_track_pos1      ; float  _crt_track_pos1[3]      ; t->SetBranchAddress("crt_track_pos1"      , _crt_track_pos1          , &_b_crt_track_pos1       );
-TBranch * _b_crt_isFV            ; int    _crt_isFV               ; t->SetBranchAddress("crt_isFV"            , &_crt_isFV               , &_b_crt_isFV       );
-TBranch * _b_crt_track_lenFV     ; float    _crt_track_lenFV      ; t->SetBranchAddress("crt_track_lenFV"     , &_crt_track_lenFV        , &_b_crt_track_lenFV       );
-TBranch * _b_crt_point_in        ; float    _crt_point_in[3]      ; t->SetBranchAddress("crt_point_in"        , _crt_point_in            , &_b_crt_point_in       );
-TBranch * _b_crt_point_out       ; float    _crt_point_out[3]     ; t->SetBranchAddress("crt_point_out"       , _crt_point_out           , &_b_crt_point_out       );
-TBranch * _b_crt_pmt_dist        ; float    _crt_pmt_dist[5]      ; t->SetBranchAddress("crt_pmt_dist"        , _crt_pmt_dist            , &_b_crt_pmt_dist       );
+	TBranch        *b_crt_track_param; t->SetBranchAddress("crt_track_param", _crt_track_param, &b_crt_track_param);   
+	TBranch        *b_crt_track_param_p; t->SetBranchAddress("crt_track_param_p", _crt_track_param_p, &b_crt_track_param_p);   
+	TBranch        *b_crt_track_param_m;  t->SetBranchAddress("crt_track_param_m", _crt_track_param_m, &b_crt_track_param_m);
+	TBranch        *b_crt_track_door; t->SetBranchAddress("crt_track_door", _crt_track_door, &b_crt_track_door);    
+	TBranch        *b_crt_track_door_p; t->SetBranchAddress("crt_track_door_p", _crt_track_door_p, &b_crt_track_door_p);   
+	TBranch        *b_crt_track_door_m;   t->SetBranchAddress("crt_track_door_m", _crt_track_door_m, &b_crt_track_door_m);
+	TBranch        *b_crt_track_wall;    t->SetBranchAddress("crt_track_wall", _crt_track_wall, &b_crt_track_wall);
+	TBranch        *b_crt_track_wall_p;  t->SetBranchAddress("crt_track_wall_p", _crt_track_wall_p, &b_crt_track_wall_p);  
+	TBranch        *b_crt_track_wall_m;  t->SetBranchAddress("crt_track_wall_m", _crt_track_wall_m, &b_crt_track_wall_m);  
+	TBranch        *b_crt_pmt_dist;   t->SetBranchAddress("crt_pmt_dist", _crt_pmt_dist, &b_crt_pmt_dist); 
+	TBranch        *b_crt_pmt_dist_p;   t->SetBranchAddress("crt_pmt_dist_p", _crt_pmt_dist_p, &b_crt_pmt_dist_p); 
+	TBranch        *b_crt_pmt_dist_m;  t->SetBranchAddress("crt_pmt_dist_m", _crt_pmt_dist_m, &b_crt_pmt_dist_m);   
+	TBranch        *b_crt_cloosest_coord; t->SetBranchAddress("crt_closest_coord", _crt_closest_coord, &b_crt_cloosest_coord);   
+	TBranch        *b_isclosestpoint; t->SetBranchAddress("crt_isclosestpoint", &_crt_isclosestpoint, &b_isclosestpoint);   
+	TBranch        *b_crt_drift_len;   t->SetBranchAddress("crt_drift_len", _crt_drift_len, &b_crt_drift_len); 
+	TBranch        *b_crt_drift_len_p; t->SetBranchAddress("crt_drift_len_p", _crt_drift_len_p, &b_crt_drift_len_p);   
+	TBranch        *b_crt_drift_len_m;   t->SetBranchAddress("crt_drift_len_m", _crt_drift_len_m, &b_crt_drift_len_m);
+	TBranch        *b_crt_isFV; t->SetBranchAddress("crt_isFV", &_crt_isFV, &b_crt_isFV);
 
+	TBranch        *b_crt_point_door_fv;  t->SetBranchAddress("crt_point_door_fv", _crt_point_door_fv, &b_crt_point_door_fv);  
+	TBranch        *b_crt_point_door_fv_p;   t->SetBranchAddress("crt_point_door_fv_p", _crt_point_door_fv_p, &b_crt_point_door_fv_p);
+	TBranch        *b_crt_point_door_fv_m;  t->SetBranchAddress("crt_point_door_fv_m", _crt_point_door_fv_m, &b_crt_point_door_fv_m);  
+	TBranch        *b_crt_point_wall_fv;  t->SetBranchAddress("crt_point_wall_fv", _crt_point_wall_fv, &b_crt_point_wall_fv);  
+	TBranch        *b_crt_point_wall_fv_p;   t->SetBranchAddress("crt_point_wall_fv_p", _crt_point_wall_fv_p, &b_crt_point_wall_fv_p); 
+	TBranch        *b_crt_point_wall_fv_m;    t->SetBranchAddress("crt_point_wall_fv_m", _crt_point_wall_fv_m, &b_crt_point_wall_fv_m);
+	TBranch        *b_isFC;    t->SetBranchAddress("crt_isFC", &_crt_isFC, &b_isFC);
+	TBranch        *b_crt_point_door_fc;  t->SetBranchAddress("crt_point_door_fc", _crt_point_door_fc, &b_crt_point_door_fc);  
+	TBranch        *b_crt_point_door_fc_p;  t->SetBranchAddress("crt_point_door_fc_p", _crt_point_door_fc_p, &b_crt_point_door_fc_p);  
+	TBranch        *b_crt_point_door_fc_m;  t->SetBranchAddress("crt_point_door_fc_m", _crt_point_door_fc_m, &b_crt_point_door_fc_m);  
+	TBranch        *b_crt_point_wall_fc;    t->SetBranchAddress("crt_point_wall_fc", _crt_point_wall_fc, &b_crt_point_wall_fc);
+	TBranch        *b_crt_point_wall_fc_p;    t->SetBranchAddress("crt_point_wall_fc_p", _crt_point_wall_fc_p, &b_crt_point_wall_fc_p);
+	TBranch        *b_crt_point_wall_fc_m;   t->SetBranchAddress("crt_point_wall_fc_m", _crt_point_wall_fc_m, &b_crt_point_wall_fc_m); 
+	TBranch        *b_adc_value_0;   t->SetBranchAddress("adc_value_0", _adc_value[0], &b_adc_value_0); 
+	TBranch        *b_adc_value_1; t->SetBranchAddress("adc_value_1", _adc_value[1], &b_adc_value_1);   
+	TBranch        *b_adc_value_2;  t->SetBranchAddress("adc_value_2", _adc_value[2], &b_adc_value_2);  
+	TBranch        *b_adc_value_3; t->SetBranchAddress("adc_value_3", _adc_value[3], &b_adc_value_3);   
+	TBranch        *b_adc_value_4; t->SetBranchAddress("adc_value_4", _adc_value[4], &b_adc_value_4);  
 
 
 	TFile *fin2=TFile::Open(Form("%s%s",tempfolder.c_str(),ifile.c_str()),"UPDATE"); //PMTrun file
@@ -119,49 +197,64 @@ TBranch * _b_crt_pmt_dist        ; float    _crt_pmt_dist[5]      ; t->SetBranch
 	//TBranch * _b2_no_hits;		t2->SetBranchAddress("NumberOfHits"		, &_no_hits			, &_b2_no_hits       );
 
 	//newbranches
-	const Int_t MaxSamples = 300000;
-	short _adc_value_2[5][MaxSamples];
-	int _PCTimeTag_2[3];
-	int _nsamples_2;
-	int _time_stamp_2;
-    	int _nevent_2;
-    	int _nchannels_2;
-  	int _crt_daq_match_2;
-  	int _crt_reco_2;
-    	int _time_sample_2;
+
+	// for safety
 	int _run_2;
         float _deltatime;
 
 	TBranch * _b2_deltatime =       t2->Branch("deltatime"		, &_deltatime	   	, "deltatime/F"       			);
 	TBranch * _b2_run = 		t2->Branch("light_run"		, &_run_2	   	, "light_run/I"       			);
-	TBranch * _b2_light_event = 	t2->Branch("light_event"	, &_nevent_2		, "light_event/I"     			);
-	TBranch * _b2_nchannels = 	t2->Branch("light_nchannels"	, &_nchannels_2		, "light_nchannels/I"   		);
-	TBranch * _b2_time_sample = 	t2->Branch("light_TimeSample" 	, &_time_sample_2  	, "light_time_sample/I" 		);
-	TBranch * _b2_nsamples = 	t2->Branch("light_nsamples"   	, &_nsamples_2     	, "light_nsamples/I"    		);	
-	TBranch * _b2_adc_value_0 = 	t2->Branch("light_adc_value_0"	, _adc_value_2[0]  	, "light_adc_value_0[light_nsamples]/S" 	);
-	TBranch * _b2_adc_value_1 = 	t2->Branch("light_adc_value_1"	, _adc_value_2[1]  	, "light_adc_value_1[light_nsamples]/S" 	);
-	TBranch * _b2_adc_value_2 = 	t2->Branch("light_adc_value_2"	, _adc_value_2[2]  	, "light_adc_value_2[light_nsamples]/S" 	);
-	TBranch * _b2_adc_value_3 =  	t2->Branch("light_adc_value_3"	, _adc_value_2[3]  	, "light_adc_value_3[light_nsamples]/S" 	);
-	TBranch * _b2_adc_value_4 =  	t2->Branch("light_adc_value_4"	, _adc_value_2[4]  	, "light_adc_value_4[light_nsamples]/S" 	);
-	TBranch * _b2_PCTimeTag = 	t2->Branch("light_PCTimeTag"  	, _PCTimeTag_2     	, "light_PCTimeTag[3]/I"   		);
-	TBranch * _b2_crt_daq_match = 	t2->Branch("light_crt_daq_match", &_crt_daq_match_2	, "light_crt_daq_match/I"		);
-	TBranch * _b2_crt_reco = 	t2->Branch("light_crt_reco"	, &_crt_reco_2		, "light_crt_reco/I"			);
-	int    _crt_adc2[4][32];	TBranch * _b2_crt_adc = 	t2->Branch("crt_adc" 	, _crt_adc2, 		"light_crt_adc[4][32]/I"     );
-	float    _crt_track_pos0_2[3];	TBranch * _b2_crt_track_pos0 = 	t2->Branch("crt_track_pos0" , _crt_track_pos0_2, "crt_track_pos0[3]/F"     );
-	float    _crt_track_pos1_2[3];	TBranch * _b2_crt_track_pos1 = 	t2->Branch("crt_track_pos1" , _crt_track_pos1_2, "crt_track_pos1[3]/F"     );
-	float    _crt_ToF_2;	 	TBranch * _b2_crt_ToF = 	t2->Branch("crt_ToF" 	, &_crt_ToF_2, 		"crt_ToF/F"     );
+	TBranch * _b2_light_event = 	t2->Branch("light_event"	, &_nevent		, "light_event/I"     			);
+	
 
-//	t2->Branch("crt_ToF"        , _crt_ToF      );
-//	t2->Branch("crt_adc"        , _crt_adc      ); 
-//	t2->Branch("crt_track_pos0"      , _crt_track_pos0    );
-//	t2->Branch("crt_track_pos1"      , _crt_track_pos1    );
-        TBranch * _b2_track_hits_id = t2->Branch("crt_track_hits_id"   , _crt_track_hits_id );
-	TBranch * _b2_crt_track_param = t2->Branch("crt_track_param"     , _crt_track_param   );
-	TBranch * _b2_crt_isFV = t2->Branch("crt_isFV"            , &_crt_isFV         );
-	TBranch * _b2_crt_track_lenFV = t2->Branch("crt_track_lenFV"     , &_crt_track_lenFV  );
-	TBranch * _b2_crt_point_in = t2->Branch("crt_point_in"        , _crt_point_in      );
-	TBranch * _b2_crt_point_out = t2->Branch("crt_point_out"       , _crt_point_out     );
-	TBranch * _b2_crt_pmt_dist = t2->Branch("crt_pmt_dist"        , _crt_pmt_dist      );
+	TBranch * _b2_TimeStamp = t2->Branch("TimeStamp", &_TimeStamp, "TimeStamp/I");
+	TBranch * _b2_PCTimeTag = t2->Branch("PCTimeTag", _PCTimeTag, "PCTimeTag[3]/I");
+	TBranch * _b2_nchannels = t2->Branch("nchannels", &_nchannels, "nchannels/I");
+	TBranch * _b2_nsamples = t2->Branch("nsamples", &_nsamples, "nsamples/I");
+	TBranch * _b2_TimeSample = t2->Branch("TimeSample", &_TimeSample, "TimeSample/I");
+	TBranch * _b2_crt_daq_match = t2->Branch("crt_daq_match", &_crt_daq_match, "crt_daq_match/I");
+	TBranch * _b2_crt_reco = t2->Branch("crt_reco", &_crt_reco, "crt_reco/I");
+	TBranch * _b2_crt_reco_sat = t2->Branch("crt_reco_sat", &_crt_reco_sat, "crt_reco_sat/I");
+	TBranch * _b2_crt_SE_time = t2->Branch("crt_SE_time", _crt_SE_time, "crt_SE_time[2]/I");
+	TBranch * _b2_crt_ToF = t2->Branch("crt_ToF", &_crt_ToF, "crt_ToF/F");
+
+	TBranch * _b2_crt_track_param = t2->Branch("crt_track_param", _crt_track_param, "crt_track_param[5]/F");
+	TBranch * _b2_crt_track_param_p = t2->Branch("crt_track_param_p", _crt_track_param_p, "crt_track_param_p[5]/F");
+	TBranch * _b2_crt_track_param_m = t2->Branch("crt_track_param_m", _crt_track_param_m, "crt_track_param_m[5]/F");
+	TBranch * _b2_crt_track_door = t2->Branch("crt_track_door", _crt_track_door, "crt_track_door[3]/F");
+	TBranch * _b2_crt_track_door_p = t2->Branch("crt_track_door_p", _crt_track_door_p, "crt_track_door_p[3]/F");
+	TBranch * _b2_crt_track_door_m = t2->Branch("crt_track_door_m", _crt_track_door_m, "crt_track_door_m[3]/F");
+	TBranch * _b2_crt_track_wall = t2->Branch("crt_track_wall", _crt_track_wall, "crt_track_wall[3]/F");
+	TBranch * _b2_crt_track_wall_p = t2->Branch("crt_track_wall_p", _crt_track_wall_p, "crt_track_wall_p[3]/F");
+	TBranch * _b2_crt_track_wall_m = t2->Branch("crt_track_wall_m", _crt_track_wall_m, "crt_track_wall_m[3]/F");
+	TBranch * _b2_crt_pmt_dist = t2->Branch("crt_pmt_dist", _crt_pmt_dist, "crt_pmt_dist[5]/F");
+	TBranch * _b2_crt_pmt_dist_p = t2->Branch("crt_pmt_dist_p", _crt_pmt_dist_p, "crt_pmt_dist_p[5]/F");
+	TBranch * _b2_crt_pmt_dist_m = t2->Branch("crt_pmt_dist_m", _crt_pmt_dist_m, "crt_pmt_dist_m[5]/F");
+	TBranch * _b2_crt_closest_coord = t2->Branch("crt_closest_coord", _crt_closest_coord, "crt_cloosest_coord[5][3]/F");
+	TBranch * _b2_crt_isclosestpoint = t2->Branch("crt_isclosestpoint", &_crt_isclosestpoint, "crt_isclosestpoint/I");
+	TBranch * _b2_crt_drift_len = t2->Branch("crt_drift_len", _crt_drift_len, "crt_drift_len[5]/F");
+	TBranch * _b2_crt_drift_len_p = t2->Branch("crt_drift_len_p", _crt_drift_len_p, "crt_drift_len_p[5]/F");
+	TBranch * _b2_crt_drift_len_m = t2->Branch("crt_drift_len_m", _crt_drift_len_m, "crt_drift_len_m[5]/F");
+	TBranch * _b2_crt_isFV = t2->Branch("crt_isFV", &_crt_isFV, "crt_isFV/I");
+	TBranch * _b2_crt_point_door_fv = t2->Branch("crt_point_door_fv", _crt_point_door_fv, "crt_point_door_fv[3]/F");
+	TBranch * _b2_crt_point_door_fv_p = t2->Branch("crt_point_door_fv_p", _crt_point_door_fv_p, "crt_point_door_fv_p[3]/F");
+	TBranch * _b2_crt_point_door_fv_m = t2->Branch("crt_point_door_fv_m", _crt_point_door_fv_m, "crt_point_door_fv_m[3]/F");
+	TBranch * _b2_crt_point_wall_fv = t2->Branch("crt_point_wall_fv", _crt_point_wall_fv, "crt_point_wall_fv[3]/F");
+	TBranch * _b2_crt_point_wall_fv_p = t2->Branch("crt_point_wall_fv_p", _crt_point_wall_fv_p, "crt_point_wall_fv_p[3]/F");
+	TBranch * _b2_crt_point_wall_fv_m = t2->Branch("crt_point_wall_fv_m", _crt_point_wall_fv_m, "crt_point_wall_fv_m[3]/F");
+	TBranch * _b2_crt_isFC = t2->Branch("crt_isFC", &_crt_isFC, "isFC/I");
+	TBranch * _b2_crt_point_door_fc = t2->Branch("crt_point_door_fc", _crt_point_door_fc, "crt_point_door_fc[3]/F");
+	TBranch * _b2_crt_point_door_fc_p = t2->Branch("crt_point_door_fc_p", _crt_point_door_fc_p, "crt_point_door_fc_p[3]/F");
+	TBranch * _b2_crt_point_door_fc_m = t2->Branch("crt_point_door_fc_m", _crt_point_door_fc_m, "crt_point_door_fc_m[3]/F");
+	TBranch * _b2_crt_point_wall_fc = t2->Branch("crt_point_wall_fc", _crt_point_wall_fc, "crt_point_wall_fc[3]/F");
+	TBranch * _b2_crt_point_wall_fc_p = t2->Branch("crt_point_wall_fc_p", _crt_point_wall_fc_p, "crt_point_wall_fc_p[3]/F");
+	TBranch * _b2_crt_point_wall_fc_m = t2->Branch("crt_point_wall_fc_m", _crt_point_wall_fc_m, "crt_point_wall_fc_m[3]/F");
+	TBranch * _b2_adc_value_0 = t2->Branch("adc_value_0", _adc_value[0], "adc_value_0[nsamples]/S");
+	TBranch * _b2_adc_value_1 = t2->Branch("adc_value_1", _adc_value[1], "adc_value_1[nsamples]/S");
+	TBranch * _b2_adc_value_2 = t2->Branch("adc_value_2", _adc_value[2], "adc_value_2[nsamples]/S");
+	TBranch * _b2_adc_value_3 = t2->Branch("adc_value_3", _adc_value[3], "adc_value_3[nsamples]/S");
+	TBranch * _b2_adc_value_4 = t2->Branch("adc_value_4", _adc_value[4], "adc_value_4[nsamples]/S");
+
 
 
 	int numentries=t->GetEntriesFast();
@@ -220,68 +313,64 @@ TBranch * _b_crt_pmt_dist        ; float    _crt_pmt_dist[5]      ; t->SetBranch
 					
 		
 		//lets_pause();
+
                 _deltatime=time_light-time_charge;
 		_run_2=run_number_L;
-		_nevent_2=_nevent;
-		_nchannels_2=_nchannels;
-		_time_sample_2=_time_sample;
-		_nsamples_2=_nsamples;
 
-		if(debug) cout << "lets assing arrays. "<<  endl;
-		//lets_pause();
-		//memcpy(_adc_value_2[0], _adc_value[0], sizeof(_adc_value[0]));
-		//memcpy(_adc_value_2[1], _adc_value[1], sizeof(_adc_value[1]));
-		//memcpy(_adc_value_2[2], _adc_value[2], sizeof(_adc_value[2]));
-		//memcpy(_adc_value_2[3], _adc_value[3], sizeof(_adc_value[3]));
-		//memcpy(_adc_value_2[4], _adc_value[4], sizeof(_adc_value[4]));
-		std::copy(std::begin(_adc_value[0]), std::end(_adc_value[0]), _adc_value_2[0]);
-		std::copy(std::begin(_adc_value[1]), std::end(_adc_value[1]), _adc_value_2[1]);
-		std::copy(std::begin(_adc_value[2]), std::end(_adc_value[2]), _adc_value_2[2]);
-		std::copy(std::begin(_adc_value[3]), std::end(_adc_value[3]), _adc_value_2[3]);
-		std::copy(std::begin(_adc_value[4]), std::end(_adc_value[4]), _adc_value_2[4]);
-
-		std::copy(std::begin(_crt_track_pos0), std::end(_crt_track_pos0), _crt_track_pos0_2);
-		std::copy(std::begin(_crt_track_pos1), std::end(_crt_track_pos1), _crt_track_pos1_2);
-		_crt_ToF_2=_crt_ToF;
-
-		std::copy(std::begin(_crt_adc[0]), std::end(_crt_adc[0]), _crt_adc2[0]);
-		std::copy(std::begin(_crt_adc[1]), std::end(_crt_adc[1]), _crt_adc2[1]);
-		std::copy(std::begin(_crt_adc[2]), std::end(_crt_adc[2]), _crt_adc2[2]);
-		std::copy(std::begin(_crt_adc[3]), std::end(_crt_adc[3]), _crt_adc2[3]);
-
-//		memcpy(_adc_value_2[4], _adc_value[4], sizeof(_adc_value[4]));
-		memcpy(_PCTimeTag_2, _PCTimeTag, sizeof(_PCTimeTag_2));
-		
-		_crt_daq_match_2=_crt_daq_match;
-		_crt_reco_2=_crt_reco;
 
 		if(debug) cout << "Variables assigned "<<  endl;
+		//cout << "_nevent = " << _nevent << endl;
 		//lets_pause();
-                _b2_deltatime->Fill();
+
 		_b2_run->Fill();
-		_b2_light_event->Fill();
-		_b2_nchannels->Fill();
-		_b2_time_sample->Fill();
-		_b2_nsamples->Fill();
-		_b2_adc_value_0->Fill();
-		_b2_adc_value_1->Fill();
-		_b2_adc_value_2->Fill();
-		_b2_adc_value_3->Fill();
-		_b2_adc_value_4->Fill();
-		_b2_crt_adc->Fill();
-		_b2_PCTimeTag->Fill();
-		_b2_crt_daq_match->Fill();
-		_b2_crt_reco->Fill();
-		_b2_crt_ToF->Fill();
-		_b2_crt_track_pos0->Fill();
-		_b2_crt_track_pos1->Fill();
-        	_b2_track_hits_id->Fill();
-		_b2_crt_track_param->Fill();
-		_b2_crt_isFV->Fill();
-		_b2_crt_track_lenFV->Fill();
-		_b2_crt_point_in->Fill();
-		_b2_crt_point_out->Fill();
-		_b2_crt_pmt_dist->Fill();
+		_b2_deltatime->Fill();
+		_b2_TimeStamp->Fill();      
+		_b2_PCTimeTag->Fill();    
+		_b2_light_event->Fill();    
+		_b2_nchannels->Fill();    
+		_b2_nsamples->Fill();    
+		_b2_TimeSample->Fill();       
+		_b2_crt_daq_match->Fill();    
+		_b2_crt_reco->Fill();    
+		_b2_crt_reco_sat->Fill();    
+		_b2_crt_SE_time->Fill();      
+		_b2_crt_ToF->Fill();    
+		_b2_crt_track_param->Fill();    
+		_b2_crt_track_param_p->Fill();    
+		_b2_crt_track_param_m->Fill();    
+		_b2_crt_track_door->Fill();    
+		_b2_crt_track_door_p->Fill();    
+		_b2_crt_track_door_m->Fill();    
+		_b2_crt_track_wall->Fill();    
+		_b2_crt_track_wall_p->Fill();    
+		_b2_crt_track_wall_m->Fill();    
+		_b2_crt_pmt_dist->Fill();    
+		_b2_crt_pmt_dist_p->Fill();    
+		_b2_crt_pmt_dist_m->Fill();    
+		_b2_crt_closest_coord->Fill();    
+		_b2_crt_isclosestpoint->Fill();    
+		_b2_crt_drift_len->Fill();    
+		_b2_crt_drift_len_p->Fill();    
+		_b2_crt_drift_len_m->Fill();    
+		_b2_crt_isFV->Fill();    
+		_b2_crt_point_door_fv->Fill();    
+		_b2_crt_point_door_fv_p->Fill();    
+		_b2_crt_point_door_fv_m->Fill();    
+		_b2_crt_point_wall_fv->Fill();    
+		_b2_crt_point_wall_fv_p->Fill();    
+		_b2_crt_point_wall_fv_m->Fill();    
+		_b2_crt_isFC->Fill();    
+		_b2_crt_point_door_fc->Fill();    
+		_b2_crt_point_door_fc_p->Fill();    
+		_b2_crt_point_door_fc_m->Fill();    
+		_b2_crt_point_wall_fc->Fill();    
+		_b2_crt_point_wall_fc_p->Fill();    
+		_b2_crt_point_wall_fc_m->Fill();    
+		_b2_adc_value_0->Fill();    
+		_b2_adc_value_1->Fill();    
+		_b2_adc_value_2->Fill();    
+		_b2_adc_value_3->Fill();    
+		_b2_adc_value_4->Fill();   
 
 		//if ( ev%1000==0 )cout << "Processing run "<<run_number<<". Evaluated " << ev << " events of " <<numentries<< " ("<< 100*(float)ev/(float)numentries<<"%)"<<  endl;
 
@@ -379,7 +468,7 @@ void timing_light(int run_number, int &starttime, int &endtime,string option){
 	cout << "--- LIGHT ana for RUN "  << run_number << " ----"<<  endl;	//
 	TChain * t = new TChain("midas_data");
 
-	t->Add( TString::Format("%s%s%08d%s",indirL.c_str(),"output",run_number,".root") );
+	t->Add( TString::Format("%s%s%08d%s",indirL.c_str(),"output",run_number,"_reprocessed.root") );
 
 	short _adc_value[5][300000];
 	int _PCTimeTag[3], _crt_SE_time[2];
