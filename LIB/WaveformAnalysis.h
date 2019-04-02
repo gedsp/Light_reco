@@ -41,7 +41,11 @@ namespace WaveformAnalysis
 	  \param ped the pedestal value to be subtracted (if > 0)
 	  \return the histogram integral between these points (not taking the bin width into account)
 	*/
-	double integral_S2(const TH1* hist, double start, double end, double ped=0, bool doWeight=false);
+	double integral_S2(const TH1* hist, double start, double end, double ped, bool doWeight=false);
+	
+	//double integral_S2_2(const TH1* hist, double ped, double t_S1);
+	
+	//double integral_S2_corr2(const TH1* hist, double ped, double t_S1, double& Q1, double& Q2);
 
 	/**Find a list of peaks between the given bin limits.  A peak here is 
 	   defined as the highest point in each pulse passing over the threshold.
@@ -76,19 +80,29 @@ namespace WaveformAnalysis
 	// Looks for S1 binpeak between minbin and maxbin
 	// If minbin and maxbin arguments are not provided, looks for S1 in entire bin range
 	int find_S1_binpeak(const TH1* hist, int minbin=0, int maxbin=0);
+	
+	//int find_S2_binpeak(const TH1* hist, double t_S1);
+	
+	int calc_S2_binavg(const TH1* hist, double start, double end, double ped);
+		
+	int find_S2_binpeak(const TH1* hist, double t_start, double t_end);
+	
+	double find_S2_peak_coarse(const TH1* hist, double t_start, double t_end);
 
 	// Calculates FWHM (in # of bins)
 	double calc_S1_width(const TH1* hist, int binpeak, double ped);
 	
+	double calc_S2_parameters(const TH1* hist, double ped, double tstart, double tend, int &binavg_S2);
 	
-	double calc_S2_parameters(const TH1* hist, double ped, double t_S1, int &binpeak_S2, int &binavg_S2);
-	
-	double calc_S2_parameters_m2(const TH1* hist, double t_S1, double &t_start, double &t_end, double &width);
+	double calc_S2_parameters_m2(const TH1* hist, const TH1* hist_rebin, double ped, double pedrms, double tS2min, 
+								 double tS2max, double t_binpeak, double &t_start, double &t_end, double &width);
 	
 	// Returns absolute value (charge) integral of S2 over pedestal in the desired time range (in units of ADC*binwidth)
-	inline double calc_S2_charge_m2(const TH1* hist, double ped, double tstart, double tend) 
-		{ return integral_S2(hist,tstart,tend,ped); }
+	inline double calc_S2_charge_m2(const TH1* hist, double ped, double tstart, double tend, bool pb) 
+		{ return integral_S2(hist,tstart,tend,ped,pb); }
 	
+	//void calc_wvf_DC(const TH1* hist, double ped, double pedrms, double& DC_c, double& DC_d);
+		
 	void correct_wvf_histo(const TH1* hist, TH1F*& hcorr, double ped, double RC_c, double RC_d);
 
 }

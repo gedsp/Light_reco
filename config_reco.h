@@ -4,13 +4,29 @@
 static const int N_PMT = 5;
 static const int N_LEM = 12;
 
-//set up the input folder where the light-charge matched data is stored.
-const string matched_data_dir = "/Volumes/data/root_files/2018Feb05/"; // local 
-//const string matched_data_dir = "/eos/user/j/jsotooto/root_files/2018Feb05/"; // on lxplus
+static const int KMAXNSEG=10;
+static const int KMAXNPEAKS=50;
+static const int KMAXNTRACKS=200;
+static const int KMAXNEVENTS = 350; // max events in a charge subrun (>335)
+static const int KMAXNHITS=50000;
+static const float ERRVAL=-9999;
 
-//set up the input folder where the light-only data is stored.
-const string light_data_dir = "/Volumes/data/root_files/light/"; // local 
-//const string light_data_dir = "/eos/experiment/wa105/data/311_PMT/data/root/"; // on lxplus
+// PMT positions in LArSoft coordinate system (in cm)
+static const float pmt_x_pos = -698.0;
+static const float pmt_y_pos = 0.0;
+static const float pmt_z_pos[N_PMT]={50.0,100.0,150.0,200.0,250.0};
+
+// set up the input folder where the light-charge matched data is stored.
+const string matched_data_dir = "/Volumes/data/root_files/2018Aug24/"; // local 
+//const string matched_data_dir = "/eos/user/l/leyton/2018Aug24/"; // on lxplus
+
+// set up the input folder where the light-only data is stored.
+const string light_data_dir = "/Volumes/data/root_files/reprocessed/"; // local 
+//const string light_data_dir = "/eos/user/c/chlastor/ReprocessedData/21Feb/"; // on lxplus
+
+// set up the input folder where the Highway Algorithm data is stored 
+const string highway_data_dir = "/Volumes/data/root_files/Highway_VBW/"; // local
+//const string highway_data_dir = "/eos/experiment/wa105/offline/LArSoft/Data/Reco/2018_August_24/Highway_VBW/"; // on lxplus
 
 // full path to Light_reco directory                        
 const string reco_dir = "/Volumes/data/Dropbox/physics/311/git/Light_reco"; // local
