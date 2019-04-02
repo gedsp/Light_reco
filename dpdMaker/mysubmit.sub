@@ -12,7 +12,6 @@ getenv 			= True
 ## Force HTCondor not to use shared filesystem
 should_transfer_files 	= YES
 when_to_transfer_output = ON_EXIT
-#initialdir 		= /afs/cern.ch/work/j/jsotooto/LogsOutputFolder
 initialdir 		= /afs/cern.ch/user/l/leyton/git/Light_reco/dpdMaker/logs
 #transfer_input_files 	= 
 requirements            = (Arch == "INTEL" && OpSys == "LINUX") || (Arch == "X86_64" && OpSys =="LINUX" )

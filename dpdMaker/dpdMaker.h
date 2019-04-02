@@ -3,7 +3,7 @@
 #include "../config_reco.h"
 //#include "THDet.C"
 #include "../LIB/HighwayReader.h"
-#include "../LIB/myFunc.h"
+//#include "../LIB/myFunc.h"
 
 bool debug=false;
 bool display_tracks=false;
