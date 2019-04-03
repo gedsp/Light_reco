@@ -20,9 +20,9 @@ if __name__ == "__main__":
                 filedir=filedir.replace('\"','')
         if 'dpd_dir' in line:
                 dpddir=line.split('=',2)[1]
-                dpddir=filedir.split(';',2)[0]
-                dpddir=filedir.replace(' ','')
-                dpddir=filedir.replace('\"','')
+                dpddir=dpddir.split(';',2)[0]
+                dpddir=dpddir.replace(' ','')
+                dpddir=dpddir.replace('\"','')
 
     RunPath=os.getcwd()
     InputPath=filedir 
