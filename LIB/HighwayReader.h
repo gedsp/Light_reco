@@ -9,10 +9,15 @@ std::vector<std::vector<float>> HighwayReader(int runrun, int subrunrun);
 
 std::vector<std::vector<float>> HighwayReader(int runrun, int subrunrun)
 {
+ 	// initialize and allocate result vector
+  	std::vector<std::vector<float>> vv_maxCBR;
+	vv_maxCBR.resize(KMAXNEVENTS);
+	
 	TString infile = Form("%s/%d/%d-%d-Highway.txt",highway_data_dir.c_str(),runrun,runrun,subrunrun);
 	
 	cout << "HighwayReader()::infile = " << infile << endl;
 	
+ 	
 	//#	Run	Subrun	Event	Track	ChargesSmallBoxView0	ChargesLargeBoxView0	ChargesSmallBoxView1	ChargesLargeBoxView1
 	
 	int run,subrun,evt,track;
@@ -28,6 +33,12 @@ std::vector<std::vector<float>> HighwayReader(int runrun, int subrunrun)
 	
     Int_t nlines = 0;
     in.open(infile);
+	
+	if (!in)
+	{
+		cout << "ERROR in HighwayReader(): File " << infile << " not found!" << endl;
+		return vv_maxCBR;
+	}
   
   	char line[50];
     for (int rrrr=0; rrrr<9; rrrr++) {
@@ -37,10 +48,6 @@ std::vector<std::vector<float>> HighwayReader(int runrun, int subrunrun)
 	 
 	 //int nevents=0;
 	 int ntracks[KMAXNEVENTS]={0};
-	 
- 	// initialize and allocate result vector
-  	std::vector<std::vector<float>> vv_maxCBR;
-	vv_maxCBR.resize(KMAXNEVENTS);
 	 
     while (in.eof()==false) {
 		
