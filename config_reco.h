@@ -33,8 +33,8 @@ const string reco_dir = "/Volumes/data/Dropbox/physics/311/git/Light_reco"; // l
 //const string reco_dir = "/afs/cern.ch/user/l/leyton/git/Light_reco"; // on lxplus 
 
 // full path to DPD storage
-//const string dpd_dir = "/afs/cern.ch/user/l/leyton/public/dpd_20180914"; // on lxplus
-const string dpd_dir = reco_dir+"/dpdMaker/dpd"; // local
+//const string dpd_dir = "/afs/cern.ch/user/l/leyton/work/dpd_20190403"; // on lxplus
+const string dpd_dir = "/Volumes/data/Dropbox/physics/311/git/Light_reco/dpdMaker/dpd"; // local
 
 // full path to db files
 const string db_charge_file = reco_dir+"/dbVoltages_charge.root";

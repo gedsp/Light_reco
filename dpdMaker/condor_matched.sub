@@ -21,4 +21,4 @@ request_memory          = 1000 MB
 +JobFlavour             = "espresso"
 +MaxRuntime 		= 90000
 +RequestCpus            = 1
-queue arguments from mychargeruns.txt
+queue arguments from matched_runs_tbc.txt
