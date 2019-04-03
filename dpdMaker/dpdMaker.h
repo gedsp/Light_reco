@@ -780,7 +780,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 						 (fabs(_Track_StartX[j]+50.)<2. && fabs(_Track_EndX[j]-50.)<2.)))
 								NumberOfSelectedTracks++;
 				*/
-				if (_Track_Length_StraightLine[j]>50. && _Track_MaxCBR[j] < 0.2 && 1) 
+				if (_Track_Length_StraightLine[j]>50. && _Track_MaxCBR[j] > 0.0 && _Track_MaxCBR[j] < 0.2) 
 					//_Track_StartDirection_Theta[j]>92. && fabs(_Track_StartDirection_Phi[j])>5. && fabs(_Track_StartDirection_Phi[j])<85. )
 				{
 					NumberOfSelectedTracks++;
