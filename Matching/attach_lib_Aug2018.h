@@ -100,7 +100,7 @@ void attach_light_charge(int run_number_L, int runnum_C, string ifile){
 	Float_t  _crt_pmt_dist_p[5];
 	Float_t  _crt_pmt_dist_m[5];
 	Float_t  _crt_closest_coord[5][3];
-	Int_t    _crt_isclosestpoint;
+	Int_t    _crt_isclosestpoint[5];
 	Float_t  _crt_drift_len[5];
 	Float_t  _crt_drift_len_p[5];
 	Float_t  _crt_drift_len_m[5];
@@ -157,7 +157,7 @@ void attach_light_charge(int run_number_L, int runnum_C, string ifile){
 	TBranch        *b_crt_pmt_dist_p;   t->SetBranchAddress("crt_pmt_dist_p", _crt_pmt_dist_p, &b_crt_pmt_dist_p); 
 	TBranch        *b_crt_pmt_dist_m;  t->SetBranchAddress("crt_pmt_dist_m", _crt_pmt_dist_m, &b_crt_pmt_dist_m);   
 	TBranch        *b_crt_cloosest_coord; t->SetBranchAddress("crt_closest_coord", _crt_closest_coord, &b_crt_cloosest_coord);   
-	TBranch        *b_isclosestpoint; t->SetBranchAddress("crt_isclosestpoint", &_crt_isclosestpoint, &b_isclosestpoint);   
+	TBranch        *b_isclosestpoint; t->SetBranchAddress("crt_isclosestpoint", _crt_isclosestpoint, &b_isclosestpoint);   
 	TBranch        *b_crt_drift_len;   t->SetBranchAddress("crt_drift_len", _crt_drift_len, &b_crt_drift_len); 
 	TBranch        *b_crt_drift_len_p; t->SetBranchAddress("crt_drift_len_p", _crt_drift_len_p, &b_crt_drift_len_p);   
 	TBranch        *b_crt_drift_len_m;   t->SetBranchAddress("crt_drift_len_m", _crt_drift_len_m, &b_crt_drift_len_m);
@@ -231,7 +231,7 @@ void attach_light_charge(int run_number_L, int runnum_C, string ifile){
 	TBranch * _b2_crt_pmt_dist_p = t2->Branch("crt_pmt_dist_p", _crt_pmt_dist_p, "crt_pmt_dist_p[5]/F");
 	TBranch * _b2_crt_pmt_dist_m = t2->Branch("crt_pmt_dist_m", _crt_pmt_dist_m, "crt_pmt_dist_m[5]/F");
 	TBranch * _b2_crt_closest_coord = t2->Branch("crt_closest_coord", _crt_closest_coord, "crt_cloosest_coord[5][3]/F");
-	TBranch * _b2_crt_isclosestpoint = t2->Branch("crt_isclosestpoint", &_crt_isclosestpoint, "crt_isclosestpoint/I");
+	TBranch * _b2_crt_isclosestpoint = t2->Branch("crt_isclosestpoint", _crt_isclosestpoint, "crt_isclosestpoint[5]/I");
 	TBranch * _b2_crt_drift_len = t2->Branch("crt_drift_len", _crt_drift_len, "crt_drift_len[5]/F");
 	TBranch * _b2_crt_drift_len_p = t2->Branch("crt_drift_len_p", _crt_drift_len_p, "crt_drift_len_p[5]/F");
 	TBranch * _b2_crt_drift_len_m = t2->Branch("crt_drift_len_m", _crt_drift_len_m, "crt_drift_len_m[5]/F");
