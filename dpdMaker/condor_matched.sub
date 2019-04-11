@@ -18,7 +18,7 @@ requirements            = (Arch == "INTEL" && OpSys == "LINUX") || (Arch == "X86
 priority 		= 20
 request_memory          = 1000 MB
 #request_disk            = 10 GB
-+JobFlavour             = "espresso"
++JobFlavour             = "microcentury"
 +MaxRuntime 		= 90000
 +RequestCpus            = 1
 queue arguments from matched_runs_tbc.txt
