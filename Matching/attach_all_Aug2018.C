@@ -12,7 +12,7 @@ Then just do:
 */
 
 //const string indirL= "/eos/experiment/wa105/data/311_PMT/data/root/"; // input folder for raw light-crt data files.
-const string indirL= "/eos/user/c/chlastor/ReprocessedData/21Feb/"; // input folder for raw light-crt data files
+const string indirL= "/eos/experiment/wa105/data/311_PMT/data/root/reprocessed_5apr19/"; // input folder for raw light-crt data files
 const string indirC= "/eos/experiment/wa105/offline/LArSoft/Data/Reco/2018_August_24/ROOT/recofast/";// input folder for raw charge data files.
 
 //const string outfolder = "/eos/user/j/jsotooto/root_files/CRT/"; //output folder where you want to store the matched data.
@@ -36,10 +36,11 @@ void attach_all_Aug2018(int option)
 //1241	,
 //1242	,
 //1295	,
-/*
+	/*
 1320	,
 1321	,
 1322	,
+*/
 1399	,
 1400	,
 1406	,
@@ -49,9 +50,7 @@ void attach_all_Aug2018(int option)
 1666	,
 1670	,
 1671	,
-*/
-1672	
-/*
+1672	,
 1682	,
 1683	,
 1684	,
@@ -88,10 +87,9 @@ void attach_all_Aug2018(int option)
 1743	,
 1744	,
 1745	
-*/
 }; //light run numbers to be assigned to the charge runs.
 	//int n_lightruns=49; // size of the vector above.
-	int n_lightruns=1;
+	int n_lightruns=46;
 
 	int Lstarttime[100], Lendtime[100];
 	for (int i=0; i<n_lightruns;i++){ cout << i << " " << light_runs[i] << endl; timing_light(light_runs[i],Lstarttime[i],Lendtime[i],"V");}
@@ -158,26 +156,26 @@ charge_run_number=	1196	;attach_charge_run(charge_run_number,n_lightruns,light_r
 charge_run_number=	1197	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
 charge_run_number=	1198	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
 charge_run_number=	1199	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	771	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	783	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	784	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	785	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	786	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	787	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	788	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	789	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	790	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	771	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	783	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	784	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	785	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	786	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	787	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	788	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	789	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	790	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
 break;
 case 5: //done
-charge_run_number=	791	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	792	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	793	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	794	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	795	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	796	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	798	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	799	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-charge_run_number=	801	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	791	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	792	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	793	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	794	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	795	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	796	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	798	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	799	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+//charge_run_number=	801	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
 charge_run_number=	833	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
 charge_run_number=	834	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
 charge_run_number=	835	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
@@ -196,16 +194,16 @@ charge_run_number=	988	;attach_charge_run(charge_run_number,n_lightruns,light_ru
 charge_run_number=	989	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
 break;
 case 7:
-  //charge_run_number=	990	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-  //charge_run_number=	991	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-  //charge_run_number=	992	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-  //charge_run_number=	993	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-  //charge_run_number=	994	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+charge_run_number=	990	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+charge_run_number=	991	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+charge_run_number=	992	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+charge_run_number=	993	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+charge_run_number=	994	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
 charge_run_number=	995	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-//charge_run_number=	996	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-//charge_run_number=	997	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-//charge_run_number=	998	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
-//charge_run_number=	999	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+charge_run_number=	996	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+charge_run_number=	997	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+charge_run_number=	998	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
+charge_run_number=	999	;attach_charge_run(charge_run_number,n_lightruns,light_runs,Lstarttime,Lendtime);
 
 }
 
