@@ -114,7 +114,7 @@ void dpdMaker(int light_run, int subrun, bool doLight)
 	
 	gSystem->Exec(Form("mkdir -p %s/light",dpd_dir.c_str()));
 	TString outfile;
-	if (subrun>=0) outfile = Form("%s/light/dpd-light-%d-%d.root",dpd_dir.c_str(),light_run,subrun);
+	if (subrun>=0) outfile = Form("%s/light/dpd-light-%d-%0.3d.root",dpd_dir.c_str(),light_run,subrun);
 	else outfile = outfile = Form("%s/light/dpd-light-%d.root",dpd_dir.c_str(),light_run);
 	
 	cout << "DPD outfile: " << outfile.Data() << endl;
