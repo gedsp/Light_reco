@@ -281,7 +281,7 @@ double WaveformAnalysis::calc_S1_width(const TH1* hist, int binpeak, double ped)
 	return width;
 }
 
-/*
+
 void WaveformAnalysis::calc_wvf_DC(const TH1* hist, double ped, double pedrms, double& DC_c, double& DC_d)
 {
 	DC_c=0;
@@ -311,7 +311,7 @@ void WaveformAnalysis::calc_wvf_DC(const TH1* hist, double ped, double pedrms, d
 
 	return;
 }
-*/
+
 
 void WaveformAnalysis::correct_wvf_histo(const TH1* hist, TH1F*& hcorr, double ped, double RC_c, double RC_d)
 {
@@ -352,6 +352,42 @@ void WaveformAnalysis::correct_wvf_histo(const TH1* hist, TH1F*& hcorr, double p
 	return;
 }
 
+
+double WaveformAnalysis::calc_optimal_RC(const TH1* hist, double ped, int rf, int binmax, double df,
+										 double RC_min, double RC_max, double RC_step, double& BestMax)
+{
+	double RC_c = 0.;
+	BestMax=-9999;
+	
+	TH1F* hc = (TH1F*)hist->Clone("hc");
+	hc->Reset();
+
+	double bestmax=9999;
+	for (double RC=RC_min; RC<=RC_max; RC+=RC_step)
+	{
+		WaveformAnalysis::correct_wvf_histo(hist,hc,ped,RC,df*RC);
+		
+		TH1F* hctmp = dynamic_cast<TH1F*>(hc->Rebin(rf,"hctmp"));
+		hctmp->Scale(1./rf);
+		double mymax = ped-hget(hctmp,binmax);
+
+		//cout << "RC_c = " << RC << ", RC_d = " << d_factor*RC << ", histmax = " << mymax << endl;
+		
+		if (fabs(mymax)<fabs(bestmax))
+		{
+			bestmax=mymax;
+			RC_c=RC;
+		}
+		delete hctmp;
+	}
+	
+	BestMax=bestmax;
+	
+	delete hc;
+	
+	return RC_c;
+}
+
 int WaveformAnalysis::find_S2_binpeak(const TH1* hist, double t_start, double t_end)
 {
 	int binpeak=0;
@@ -379,6 +415,27 @@ int WaveformAnalysis::find_S2_binpeak(const TH1* hist, double t_start, double t_
 	return binpeak;
 }
 
+int WaveformAnalysis::find_S2_binmax(const TH1* hist, double t_start, double t_end)
+{
+	int binmax=0;
+	double max=-1.E9;
+	
+	int minbin,maxbin=0;
+
+	minbin=hist->GetXaxis()->FindBin(t_start);
+	maxbin=hist->GetXaxis()->FindBin(t_end);
+	
+	for (int i=minbin; i<=maxbin; i++)
+	{
+		if (hget(hist,i)>max)
+		{
+			binmax=i;
+			max=hget(hist,i);
+		}
+	}
+	
+	return binmax;
+}
 
 double WaveformAnalysis::find_S2_peak_coarse(const TH1* hist, double t_start, double t_end)
 {

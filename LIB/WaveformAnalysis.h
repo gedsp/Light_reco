@@ -87,6 +87,8 @@ namespace WaveformAnalysis
 		
 	int find_S2_binpeak(const TH1* hist, double t_start, double t_end);
 	
+	int find_S2_binmax(const TH1* hist, double t_start, double t_end);
+	
 	double find_S2_peak_coarse(const TH1* hist, double t_start, double t_end);
 
 	// Calculates FWHM (in # of bins)
@@ -101,9 +103,12 @@ namespace WaveformAnalysis
 	inline double calc_S2_charge_m2(const TH1* hist, double ped, double tstart, double tend, bool pb) 
 		{ return integral_S2(hist,tstart,tend,ped,pb); }
 	
-	//void calc_wvf_DC(const TH1* hist, double ped, double pedrms, double& DC_c, double& DC_d);
+	void calc_wvf_DC(const TH1* hist, double ped, double pedrms, double& DC_c, double& DC_d);
 		
 	void correct_wvf_histo(const TH1* hist, TH1F*& hcorr, double ped, double RC_c, double RC_d);
+	
+	double calc_optimal_RC(const TH1* hist, double ped, int rf, int binmax, double df,
+						   double RC_min, double RC_max, double RC_step, double& BestMax);
 
 }
 
