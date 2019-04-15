@@ -47,8 +47,9 @@ double _pmt_wvf_end_fit_c1[N_PMT];
 double _pmt_wvf_end_fit_c2[N_PMT];
 double _pmt_wvf_end_fit_chi2[N_PMT];
 int    _pmt_wvf_end_fit_ndof[N_PMT];
-double _pmt_wvf_corr_RC_c[N_PMT];
-double _pmt_wvf_corr_RC_d[N_PMT];
+double _pmt_wvf_corr_RC_eff[N_PMT];
+double _pmt_wvf_max_uncorr[N_PMT];
+double _pmt_wvf_max_corr[N_PMT];
 double _pmt_wvf_properties[N_PMT][2];
 int    _pmt_npeaks[N_PMT];
 double _pmt_peaks_tau[N_PMT][KMAXNPEAKS];
@@ -137,7 +138,7 @@ float _tpc_track_length_straight_line[KMAXNTRACKS];
 float _tpc_drift_time_at_pmt[N_PMT];
 float _tpc_drift_time_at_pmt2[N_PMT];
 
-float _tpc_track_max_CBR[KMAXNTRACKS];
+float _tpc_track_max_CBR_view[KMAXNTRACKS][2];
 
 
 void initDPDvariables();
@@ -424,8 +425,9 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 	TBranch * _bn_pmt_wvf_end_fit_c2   			= dpd->Branch("pmt_wvf_end_fit_c2",		_pmt_wvf_end_fit_c2, 	"pmt_wvf_end_fit_c2[5]/D");
 	TBranch * _bn_pmt_wvf_end_fit_chi2  		= dpd->Branch("pmt_wvf_end_fit_chi2",	_pmt_wvf_end_fit_chi2, 	"pmt_wvf_end_fit_chi2[5]/D");
 	TBranch * _bn_pmt_wvf_end_fit_ndof  		= dpd->Branch("pmt_wvf_end_fit_ndof",	_pmt_wvf_end_fit_ndof, 	"pmt_wvf_end_fit_ndof[5]/I");
-	TBranch * _bn_pmt_wvf_corr_RC_c     		= dpd->Branch("pmt_wvf_corr_RC_c",		_pmt_wvf_corr_RC_c, 	"pmt_wvf_corr_RC_c[5]/D");
-	TBranch * _bn_pmt_wvf_corr_RC_d     		= dpd->Branch("pmt_wvf_corr_RC_d",		_pmt_wvf_corr_RC_d , 	"pmt_wvf_corr_RC_d[5]/D");		
+	TBranch * _bn_pmt_wvf_corr_RC_eff     		= dpd->Branch("pmt_wvf_corr_RC_eff",	_pmt_wvf_corr_RC_eff, 	"pmt_wvf_corr_RC_eff[5]/D");
+	TBranch * _bn_pmt_wvf_max_corr    			= dpd->Branch("pmt_wvf_max_corr",		_pmt_wvf_max_corr, 		"pmt_wvf_max_corr[5]/D");
+	TBranch * _bn_pmt_wvf_max_uncorr    		= dpd->Branch("pmt_wvf_max_uncorr",		_pmt_wvf_max_uncorr, 	"pmt_wvf_max_uncorr[5]/D");		
 	TBranch * _bn_pmt_npeaks	   			 	= dpd->Branch("pmt_npeaks",  			_pmt_npeaks, 			"pmt_npeaks[5]/I");
 	TBranch * _bn_pmt_peaks_tau 				= dpd->Branch("pmt_peaks_tau", 			_pmt_peaks_tau,  		Form("pmt_peaks_tau[5][%d]/D",KMAXNPEAKS));
 	
@@ -475,7 +477,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 		TBranch * _bn_tpc_track_momentum 			= dpd->Branch("tpc_track_momentum", 			_tpc_track_momentum, 			"tpc_track_momentum[ntracks]/F");
 		TBranch * _bn_tpc_track_length_trajectory 	= dpd->Branch("tpc_track_length_trajectory",	_tpc_track_length_trajectory, 	"tpc_track_length_trajectory[ntracks]/F");
 		TBranch * _bn_tpc_track_length_straight_line= dpd->Branch("tpc_track_length_straight_line", _tpc_track_length_straight_line,"tpc_track_length_straight_line[ntracks]/F");
-		TBranch * _bn_tpc_track_max_CBR 			= dpd->Branch("tpc_track_max_CBR",				_tpc_track_max_CBR, 			"tpc_track_max_CBR[ntracks]/F");
+		TBranch * _bn_tpc_track_max_CBR_view		= dpd->Branch("tpc_track_max_CBR_view",			_tpc_track_max_CBR_view, 		"tpc_track_max_CBR[ntracks][2]/F");
 		
 		TBranch * _bn_tpc_track_start_x				= dpd->Branch("tpc_track_start_x",				_tpc_track_start_x, 			"tpc_track_start_x[ntracks]/F");
 		TBranch * _bn_tpc_track_start_y				= dpd->Branch("tpc_track_start_y",				_tpc_track_start_y, 			"tpc_track_start_y[ntracks]/F");
@@ -505,7 +507,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 	
 	
 	// initialize vector for highway algorithm CBR
-	std::vector<std::vector<float>> vvMaxCBR;	
+	std::vector<std::vector<std::pair<float,float>>> vvMaxCBR;	
 
 	if (debug) cout << "Total number of events in tree: \t" << t2->GetEntries()  << endl;
 
@@ -721,29 +723,21 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 			std::size_t n(0);
 			std::generate(std::begin(sorted_tracks), std::end(sorted_tracks), [&]{ return n++; });
 
-			// JOSE
+			// JOSE: sort by track_charge
 			//std::sort(  std::begin(sorted_tracks), std::end(sorted_tracks), [&](int i1, int i2) { return trackcharge[i1] > trackcharge[i2]; } );
 			
-			// Michael
+			// Michael: sort by track_charge_anode
 			std::sort(  std::begin(sorted_tracks), std::end(sorted_tracks), [&](int i1, int i2) { 
 				return (mytrackcharge_anode[i1][0]+mytrackcharge_anode[i1][1])>(mytrackcharge_anode[i2][0]+mytrackcharge_anode[i2][1]); } );
+				
+			// Chiara: sort by track length
+			//std::sort(  std::begin(sorted_tracks), std::end(sorted_tracks), [&](int i1, int i2) { return _Track_Length_Trajectory[i1]>_Track_Length_Trajectory[i2]; } );
 
 			//for (int j=0; j<_NumberOfTracks; j++) cout << "\t\tSorted track " << j << " " << sorted_tracks[j] << " " << trackcharge[sorted_tracks[j]] <<"IAC"<< endl;
 		
 			if (debug) cout << "\t... 3d tracks sorted." << endl;
 				
-				
-			/*	 // sorting by track length (Chiara)
-			short sorted_tracks2[KMAXNTRACKS]; // tracks sorted by total charge in the track
-			std::size_t n2(0);
-			std::generate(std::begin(sorted_tracks2), std::end(sorted_tracks2), [&]{ return n2++; });
-			//std::sort(  std::begin(sorted_tracks2), std::end(sorted_tracks2), [&](int i1, int i2) { return _Track_Length_Trajectory[i1]>_Track_Length_Trajectory[i2]; } );
-				
-			for (int j=0; j<_NumberOfTracks; j++)
-			{
-				cout << "track " << j << ": sort1 = " << sorted_tracks[j] << ", sort 2 = " << sorted_tracks2[j] << endl;
-			}
-			*/
+
 				
 				
 				
@@ -752,12 +746,21 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 			
 			if (debug) cout << "\t... reading Highway algorithm information ..." << endl;
 			
-			float _Track_MaxCBR[KMAXNTRACKS]={0};
+			float _Track_MaxCBR_view[KMAXNTRACKS][2]={0};
 			if (vvMaxCBR.size()==0) vvMaxCBR = HighwayReader(_runcharge,_subruncharge);
 			for (int j=0; j<_NumberOfTracks; j++)
 			{
-				if (vvMaxCBR.at(ev).size()>0 && j<vvMaxCBR.at(ev).size()) _Track_MaxCBR[j] = (vvMaxCBR.at(ev).at(j)!=0)?vvMaxCBR.at(ev).at(j):ERRVAL;
-				else _Track_MaxCBR[j] = ERRVAL;
+				if (vvMaxCBR.at(ev).size()>0 && j<vvMaxCBR.at(ev).size()) 
+				{
+					_Track_MaxCBR_view[j][0] = (vvMaxCBR.at(ev).at(j).first!=0)?vvMaxCBR.at(ev).at(j).first:ERRVAL;
+					_Track_MaxCBR_view[j][1] = (vvMaxCBR.at(ev).at(j).second!=0)?vvMaxCBR.at(ev).at(j).second:ERRVAL;
+				}
+				else
+				{
+					_Track_MaxCBR_view[j][0] = ERRVAL;
+					_Track_MaxCBR_view[j][1] = ERRVAL;
+				}
+				//cout << "Track " << j << ": " << _Track_MaxCBR_view[j][0] << ", " << _Track_MaxCBR_view[j][1] << endl;
 			}
 			
 			if (debug) cout << "\t... Highway reader done ..." << endl;
@@ -780,8 +783,8 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 						 (fabs(_Track_StartX[j]+50.)<2. && fabs(_Track_EndX[j]-50.)<2.)))
 								NumberOfSelectedTracks++;
 				*/
-				if (_Track_Length_StraightLine[j]>50. && _Track_MaxCBR[j] > 0.0 && _Track_MaxCBR[j] < 0.2) 
-					//_Track_StartDirection_Theta[j]>92. && fabs(_Track_StartDirection_Phi[j])>5. && fabs(_Track_StartDirection_Phi[j])<85. )
+				if (_Track_Length_StraightLine[j]>100. && _Track_StartDirection_Theta[j]>92.)
+					//&& fabs(_Track_StartDirection_Phi[j])>5. && fabs(_Track_StartDirection_Phi[j])<85. )
 				{
 					NumberOfSelectedTracks++;
 					isSelected[j]=true;
@@ -993,6 +996,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 					_tpc_track_charge_LAr_view[j][v] = mytrackcharge_liquid[sorted_tracks[j]][v];
 					_tpc_track_dE_view[j][v] = mytrack_dE[sorted_tracks[j]][v];
 					_tpc_track_avg_dEds_view[j][v] = mytrack_avg_dEds[sorted_tracks[j]][v];
+					_tpc_track_max_CBR_view[j][v] = _Track_MaxCBR_view[sorted_tracks[j]][v];
 				}
 			}
 
@@ -1021,7 +1025,6 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 				_tpc_track_momentum[j] = _Track_Momentum[sorted_tracks[j]];
 				_tpc_track_length_trajectory[j] = _Track_Length_Trajectory[sorted_tracks[j]];
 				_tpc_track_length_straight_line[j] = _Track_Length_StraightLine[sorted_tracks[j]];
-				_tpc_track_max_CBR[j] = _Track_MaxCBR[sorted_tracks[j]];
 			}			
 		
 			for (int k=0; k<N_PMT; k++)
@@ -1053,8 +1056,6 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 		TH1F *h_corr_m[N_PMT];
 		double totlight[N_PMT+1]={0};
 		int pmt_wvf_ADC_sat[N_PMT]={0};
-		double wvf_corr_RC_c[N_PMT]={0};
-		double wvf_corr_RC_d[N_PMT]={0};
 		
 		if (debug) cout << "\tLight variables: Nsamples " << _nsamples  << "\t" << _time_sample<< endl;
 
@@ -1089,6 +1090,9 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 		double wvf_end_fit_c2[N_PMT]={0};
 		double wvf_end_fit_chi2[N_PMT]={0};
 		int    wvf_end_fit_ndof[N_PMT]={0};
+		double wvf_corr_RC_eff[N_PMT]={0};
+		double wvf_max_corr[N_PMT]={0};
+		double wvf_max_uncorr[N_PMT]={0};
 
 		
 		//so let's do 0-0.4 for 4 us and 228-228.4 for 1 ms
@@ -1114,7 +1118,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 			ped_end_start = 3.6;
 			ped_end_stop  = 4.0;
 		
-			rebinfactor = 4;
+			rebinfactor = 40;
 			S1_mintime = 0.3;
 			S1_maxtime = 0.65;
 			S2_maxtime = 4.0;	
@@ -1135,14 +1139,20 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 			
 			double ped_diff = ped_end[k]-ped[k];
 			
+			
+			// rebin histo for calculating binmax and fitting
+			TH1F* htmp_rebin = dynamic_cast<TH1F*>(h[k]->Rebin(rebinfactor,Form("%s%i","htmp_rebin",k)));
+			htmp_rebin->Scale(1.0/rebinfactor);
+	
+			// find bin maximum of rebinned original histo
+			int orig_binmax = WaveformAnalysis::find_S2_binmax(htmp_rebin, S1_mintime, S2_maxtime);
+			wvf_max_uncorr[k] = ped[k]-hget(htmp_rebin,orig_binmax);
+
 
 			// WF fitting and correction for positive-base PMTs
 			if (_nsamples>1000 && (k==2 || k==3)) 
 			{
 				if (debug) cout << "\t... fitting end of wf"<< endl;
-				
-				TH1F* htmp_rebin = dynamic_cast<TH1F*>(h[k]->Rebin(rebinfactor,Form("%s%i","htmp_rebin",k)));
-				htmp_rebin->Scale(1.0/rebinfactor);
 				
 				float RC_c_max = 1200.; 
 			
@@ -1165,38 +1175,51 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 				// default case
 				double RC_c_def=284.7;
 				double RC_d_def=254.5;
+				double Cap=200.E-9; // F
 							
 				double RC_c_cap = RC_c_def;
 				double RC_d_cap = RC_d_def;
 				
 				if (_runlight < 609) // 6.8 nF
 				{
+					Cap = 6.8E-9;
 					RC_c_cap = 82.9;
 					RC_d_cap = 77.0;
 				}
 				else if (_runlight < 1064) // 150 nF
 				{
 					// note that ch 3 splitter disconnected for light runs 935-1063
+					Cap = 150.E-9;
 					RC_c_cap = 310.7;
 					RC_d_cap = 297.8;
 				}
-				else if (k==3)
+				else if (k==3) // 300 nF
 				{
+					Cap = 300.E-9;
 					RC_c_cap = 307.2;
 					RC_d_cap = 294.6;
 				}
 				else if (_runlight < 1717) // 150 nF
 				{
+					Cap = 150.E-9;
 					RC_c_cap = 310.7;
 					RC_d_cap = 297.8;
 				}
 				else // 200 nF
 				{
+					Cap = 200.E-9;
 					RC_c_cap = 260.4;
 					RC_d_cap = 249.3;
 				}
 				
-				//printf("Chan %d: RC_c_cap = %f, RC_d_cap = %f\n",k,RC_c_cap,RC_d_cap);
+				if (debug) printf("Chan %d: Cap = %e, RC_c_cap = %f, RC_d_cap = %f\n",k,Cap,RC_c_cap,RC_d_cap);
+				
+				/*
+				TH1F* htmp_rb = dynamic_cast<TH1F*>(h[k]->Rebin(rebinfactor,"htmp_rb"));
+				htmp_rb->Draw("hist");
+				lets_pause();
+				delete htmp_rb;
+				*/
 				
 				// set h_corr, h_corr_p and h_corr_m
 				TH1F* h_corr = (TH1F*)h[k]->Clone("hcorr");
@@ -1208,54 +1231,27 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 				WaveformAnalysis::correct_wvf_histo(h[k],h_corr_m[k],ped[k],RC_c_def,RC_d_def);	
 				
 				// Now for the nominal correction
-				// Scan RC_c parameter to find value that minimizes difference between start and end pedestals
+				// Scan RC_c parameter to find value that minimizes the maximum value of waveform during S2
 				
 				// set values to default in case there is error
 				double RC_c = RC_c_def;
 				double RC_d = RC_d_def;
 				
-				float bestpeddiff=9999;
-				float d_factor = 0.925;
+				double MyBestMax=-9999;
+				double d_factor = 1.0; // 0.925;
+				
 				// coarse search
-				for (float RC=50.;RC<=RC_c_max; RC+=50.)
-				{
-					WaveformAnalysis::correct_wvf_histo(h[k],h_corr,ped[k],RC,d_factor*RC);
-					double pedcorr,pedrmscorr,pedendcorr,pedrmsendcorr,mypeddiff;
-					pedcorr = WaveformAnalysis::baseline(h_corr,pedrmscorr,h[k]->FindBin(ped_start),h[k]->FindBin(ped_stop)-1); 
-					pedendcorr = WaveformAnalysis::baseline(h_corr,pedrmsendcorr,h[k]->FindBin(ped_end_start),h[k]->FindBin(ped_end_stop)-1); 
-					mypeddiff = fabs(pedendcorr-pedcorr);
-					//cout << "RC_c = " << RC << ", RC_d = " << d_factor*RC << ", peddiff = " << mypeddiff << endl;
-					if (mypeddiff<bestpeddiff)
-					{
-						bestpeddiff=mypeddiff;
-						RC_c=RC;
-						RC_d=d_factor*RC;
-					}
-				}
-				if (debug) cout << "chan " << k << ", best result step 1: RC_c = " << RC_c << ", RC_d = " << RC_d << ", peddiff = " << bestpeddiff << endl;
+				RC_c = WaveformAnalysis::calc_optimal_RC(h[k],ped[k],rebinfactor,orig_binmax,d_factor,50.,RC_c_max,50.,MyBestMax);
 				
-				// fine  search
-				float RCtmp=RC_c;
-				for (float RC=RCtmp-40;RC<=RCtmp+40; RC+=10.)
-				{
-					if (RC>RC_c_max) continue;
-					WaveformAnalysis::correct_wvf_histo(h[k],h_corr,ped[k],RC,d_factor*RC);
-					double pedcorr,pedrmscorr,pedendcorr,pedrmsendcorr,mypeddiff;
-					pedcorr = WaveformAnalysis::baseline(h_corr,pedrmscorr,h[k]->FindBin(ped_start),h[k]->FindBin(ped_stop)-1); 
-					pedendcorr = WaveformAnalysis::baseline(h_corr,pedrmsendcorr,h[k]->FindBin(ped_end_start),h[k]->FindBin(ped_end_stop)-1); 
-					mypeddiff = fabs(pedendcorr-pedcorr); 
-					//cout << "RC_c = " << RC << ", RC_d = " << d_factor*RC << ", peddiff = " << mypeddiff << endl;
-					if (mypeddiff<bestpeddiff)
-					{
-						bestpeddiff=mypeddiff;
-						RC_c=RC;
-						RC_d=d_factor*RC;
-					}
-				}
-				if (debug) cout << "chan " << k << ", best result step 2: RC_c = " << RC_c << ", RC_d = " << RC_d << ", peddiff = " << bestpeddiff << endl;
+				if (debug || 1) cout << "chan " << k << ", best result step 1: RC_c = " << RC_c << ", RC_d = " << d_factor*RC_c << ", bestmax = " << MyBestMax << endl;
+	
+				// fine search
+				RC_c = WaveformAnalysis::calc_optimal_RC(h[k],ped[k],rebinfactor,orig_binmax,d_factor,TMath::Max(0.,RC_c-40),TMath::Min((double)RC_c_max,RC_c+40),10.,MyBestMax);
 				
-				wvf_corr_RC_c[k] = RC_c;
-				wvf_corr_RC_d[k] = RC_d;
+				if (debug || 1) cout << "chan " << k << ", best result step 2: RC_c = " << RC_c << ", RC_d = " << d_factor*RC_c << ", bestmax = " << MyBestMax << endl;
+				
+				wvf_corr_RC_eff[k] = RC_c;
+				wvf_max_corr[k] = MyBestMax;
 				
 				if (debug) cout << "\t... correcting wf histogram and re-calculating pedestal" << endl;
 				
@@ -1264,7 +1260,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 				if (RC_c>10. && RC_c<RC_c_max) 
 				{
 					if (debug) cout << "Applying wvf correction for channel " << k << endl;
-					WaveformAnalysis::correct_wvf_histo(h[k],h_corr,ped[k],RC_c,RC_d);	
+					WaveformAnalysis::correct_wvf_histo(h[k],h_corr,ped[k],RC_c,d_factor*RC_c);	
 					
 					// save uncorrected pedestal values
 					ped_uncorr[k]=ped[k];
@@ -1290,7 +1286,8 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 					h_corr->Clear();
 					h_corr->Add(h[k]);
 				}
-			
+				
+				
 				/*
 				double DC_c,DC_d;
 				if (k==2 || k==3) WaveformAnalysis::calc_wvf_DC(h[k],ped[k],pedrms[k],DC_c,DC_d);
@@ -1299,7 +1296,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 				//pedrms_end[k]<2.0 && !pmt_wvf_ADC_sat[k] && wvf_end_fit_chi2[k]<4.0 && wvf_end_fit_c2[k]>20. && wvf_end_fit_c2[k]<1000
 					
 					
-				if (0 && pedrms[k]<1.0)
+				if (0 && pedrms[k]<1.4) //  && _tpc_track_length_straight_line[0]>50.)
 				{
 					printf("evt %d: ped[%i] = %0.2f +/- %0.2f\n", ev, k, ped[k], pedrms[k]); 
 					if (RC_c>10. && RC_c<RC_c_max) printf("ped_uncorr = %f, ped_end_uncorr = %f, ped_uncorr_diff = %f\n",ped_uncorr[k],ped_end_uncorr[k],ped_end_uncorr[k]-ped_uncorr[k]);
@@ -1318,17 +1315,27 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 					h_corr->Draw("hist.same");
 					fit->SetLineColor(kRed);
 					fit->Draw("same");
+					
+					float x = 0.55;
+					float y = 0.45;
+					TLatex l;
+					l.SetNDC();
+					l.DrawLatex(x,y+0.06,Form("Run %d, Event %d",_run_charge_out,_nevent_charge_out));
+					//l.DrawLatex(x,y,Form("ped = %0.2f +/- %0.2f",ped[k],pedrms[k]));
+					l.DrawLatex(x,y-0.06,Form("RC_fit = %0.1f #mus",wvf_end_fit_c2[k]));
+					l.DrawLatex(x,y-0.12,Form("RC_eff = %0.1f #mus",RC_c));					
+					
 					c1->Modified();
 					c1->Update();
+					
 					lets_pause();
 				}
 
 				delete h_corr;
-				delete fit;
-				delete htmp_rebin;
-				
+				delete fit;				
 			}
 			
+			delete htmp_rebin;
 			
 			if (debug) cout << "\t... rebinning wf histogram for plotting and fitting"<< endl;
 			
@@ -1530,8 +1537,9 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 			_pmt_wvf_end_fit_c2[k]=wvf_end_fit_c2[k];
 			_pmt_wvf_end_fit_chi2[k]=wvf_end_fit_chi2[k];
 			_pmt_wvf_end_fit_ndof[k]=wvf_end_fit_ndof[k];
-			_pmt_wvf_corr_RC_c[k]=wvf_corr_RC_c[k];
-			_pmt_wvf_corr_RC_d[k]=wvf_corr_RC_d[k];
+			_pmt_wvf_corr_RC_eff[k]=wvf_corr_RC_eff[k];
+			_pmt_wvf_max_corr[k]=wvf_max_corr[k];
+			_pmt_wvf_max_uncorr[k]=wvf_max_uncorr[k];
 			
 			_pmt_npeaks[k] = TMath::Min(KMAXNPEAKS,(int)pmt_valleys[k].size());
 			//for (int i=0; i<TMath::Min(_pmt_npeaks[k],KMAXNPEAKS); i++) _pmt_peaks_tau[k][i]=pmt_valleys_tau[k][i]; 
@@ -1833,7 +1841,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 		
 		
 		if (display_waveforms)		
-		//if (_tpc_track_length_trajectory[0]>50. && _tpc_track_max_CBR[0]<0.2 && display_waveforms)
+		//if (_tpc_track_length_trajectory[0]>50. && _tpc_track_max_CBR[0]>0. && _tpc_track_max_CBR[0]<0.2 && display_waveforms)
 		{
 			TCanvas *c1;
 			
@@ -1866,6 +1874,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 				l.DrawLatex(x,y-0.18,Form("S2_m2: %0.2f #mus, %0.1f #mus, %0.1f #mus",_pmt_S2_tau_start[k],_pmt_S2_tau_end[k],_pmt_S2_width[k]));
 				l.DrawLatex(x,y-0.24,Form("S2: %0.1f ADC, %0.1f PE",_pmt_S2_charge[k]/q,_pmt_S2_npe[k]));
 				l.DrawLatex(x,y-0.30,Form("S2_m2: %0.1f ADC, %0.1f PE",_pmt_S2_charge_m2[k]/q,_pmt_S2_npe_m2[k]));
+				cout << "k = " << k << ", S2 amp = " << _pmt_S2_amp[k] << ", npeaks = " << _pmt_npeaks[k] << endl;
 				/*
 				l.DrawLatex(x,y-0.06,Form("ped_end = %0.2f +/- %0.2f",ped_end[k],pedrms_end[k]));
 				l.DrawLatex(x,y-0.12,Form("S1: %0.2f nC, %0.2f V, %0.1f ns, %0.1f #mus",1e9*_pmt_S1_charge_1us[k],_pmt_S1_amp[k],_pmt_S1_width[k],_pmt_S1_tau[k]));
@@ -1936,8 +1945,9 @@ void initDPDvariables()
 		_pmt_wvf_end_fit_c2[i]=ERRVAL;
 		_pmt_wvf_end_fit_chi2[i]=ERRVAL;
 		_pmt_wvf_end_fit_ndof[i]=-1;
-		_pmt_wvf_corr_RC_c[i]=ERRVAL;
-		_pmt_wvf_corr_RC_d[i]=ERRVAL;
+		_pmt_wvf_corr_RC_eff[i]=ERRVAL;
+		_pmt_wvf_max_corr[i]=ERRVAL;
+		_pmt_wvf_max_uncorr[i]=ERRVAL;
 		_pmt_wvf_properties[i][0]=ERRVAL;
 		_pmt_wvf_properties[i][1]=ERRVAL;
 		_pmt_npeaks[i]=-1;
@@ -2039,8 +2049,6 @@ void initDPDvariables()
 		_tpc_track_length_trajectory[i]=ERRVAL;
 		_tpc_track_length_straight_line[i]=ERRVAL;
 
-		_tpc_track_max_CBR[i]=ERRVAL;
-		
 		for (int v=0; v<2; v++)
 		{
 			_tpc_track_charge_anode_view[i][v]=ERRVAL;
@@ -2048,6 +2056,7 @@ void initDPDvariables()
 			_tpc_track_dE_view[i][v]=ERRVAL;
 			_tpc_track_avg_dEds_view[i][v]=ERRVAL;
 			_tpc_track_nhits_view[i][v]=ERRVAL;
+			_tpc_track_max_CBR_view[i][v]=ERRVAL;
 		}
 	}
 }
