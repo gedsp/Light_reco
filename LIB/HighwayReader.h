@@ -5,12 +5,12 @@
 
 #include "../config_reco.h"
 
-std::vector<std::vector<float>> HighwayReader(int runrun, int subrunrun);
+std::vector<std::vector<std::pair<float,float>>> HighwayReader(int runrun, int subrunrun);
 
-std::vector<std::vector<float>> HighwayReader(int runrun, int subrunrun)
+std::vector<std::vector<std::pair<float,float>>> HighwayReader(int runrun, int subrunrun)
 {
  	// initialize and allocate result vector
-  	std::vector<std::vector<float>> vv_maxCBR;
+  	std::vector<std::vector<std::pair<float,float>>> vv_maxCBR;
 	vv_maxCBR.resize(KMAXNEVENTS);
 	
 	TString infile = Form("%s/%d/%d-%d-Highway.txt",highway_data_dir.c_str(),runrun,runrun,subrunrun);
@@ -60,19 +60,19 @@ std::vector<std::vector<float>> HighwayReader(int runrun, int subrunrun)
   	  //if (!in.good()) break;
 	  
 	  // calculations
-		float max_CBR=ERRVAL;
+		std::pair<float,float> max_CBR={ERRVAL,ERRVAL};
 			
 		for (int i=0; i<KMAXNSEG; i++)
 		{
 			if (clbv0[i]==ERRVAL || csbv0[i]==ERRVAL || csbv0[i]==0) continue;
 			float cbr0 = (clbv0[i]-csbv0[i])/csbv0[i];
-			if (cbr0>max_CBR) max_CBR=cbr0; 
+			if (cbr0>max_CBR.first) max_CBR.first=cbr0; 
 		}
 		for (int i=0; i<KMAXNSEG; i++)
 		{
 			if (clbv1[i]==ERRVAL || csbv1[i]==ERRVAL || csbv1[i]==0) continue;
 			float cbr1 = (clbv1[i]-csbv1[i])/csbv1[i];
-			if (cbr1>max_CBR) max_CBR=cbr1;
+			if (cbr1>max_CBR.second) max_CBR.second=cbr1;
 		}
 		
 		// now fill result vector
