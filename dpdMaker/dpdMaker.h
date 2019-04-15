@@ -224,7 +224,6 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
   	int _crt_daq_match;
   	int _crt_reco;
 	int _crt_reco_sat;
-	int _crt_isclosestpoint;
     int _time_sample;
 	int _runlight;
 	short _adc_value[5][300000];
@@ -232,6 +231,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 
 	int	  _crt_isFV;
 	int   _crt_isFC;
+	int   _crt_isclosestpoint[5];
 	float _crt_pmt_dist[5];
 	float _crt_track_param[5];
 	float _crt_drift_len[5];
@@ -329,7 +329,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 	TBranch * _b2_crt_daq_match;		t2->SetBranchAddress("crt_daq_match", 		&_crt_daq_match, 		&_b2_crt_daq_match);
 	TBranch * _b2_crt_reco;				t2->SetBranchAddress("crt_reco", 			&_crt_reco, 			&_b2_crt_reco);
 	TBranch * _b2_crt_reco_sat;			t2->SetBranchAddress("crt_reco_sat", 		&_crt_reco_sat, 		&_b2_crt_reco_sat);
-	TBranch * _b2_crt_isclosestpoint;	t2->SetBranchAddress("crt_isclosestpoint", 	&_crt_isclosestpoint, 	&_b2_crt_isclosestpoint);
+	TBranch * _b2_crt_isclosestpoint;	t2->SetBranchAddress("crt_isclosestpoint", 	_crt_isclosestpoint, 	&_b2_crt_isclosestpoint);
 	TBranch * _b2_crt_ToF;  			t2->SetBranchAddress("crt_ToF", 			&_crt_ToF, 				&_b2_crt_ToF);
 	TBranch * _b2_crt_isFC; 	 		t2->SetBranchAddress("crt_isFC", 			&_crt_isFC, 			&_b2_crt_isFC);
 	TBranch * _b2_crt_isFV;  			t2->SetBranchAddress("crt_isFV", 			&_crt_isFV, 			&_b2_crt_isFV);
@@ -386,7 +386,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 	
 	TBranch * _bn_crt_isFC						= dpd->Branch("crt_isFC",				&_crt_isFC, 			"crt_isFC/I");
 	TBranch * _bn_crt_isFV						= dpd->Branch("crt_isFV",				&_crt_isFV, 			"crt_isFV/I");
-	TBranch * _bn_crt_isclosestpoint 			= dpd->Branch("crt_isclosestpoint",		&_crt_isclosestpoint, 	"crt_isclosestpoint/I");
+	TBranch * _bn_crt_isclosestpoint 			= dpd->Branch("crt_isclosestpoint",		&_crt_isclosestpoint, 	"crt_isclosestpoint[5]/I");
 	TBranch * _bn_crt_ToF						= dpd->Branch("crt_ToF",				&_crt_ToF, 				"crt_ToF/F");
 	TBranch * _bn_crt_pmt_dist_n				= dpd->Branch("crt_pmt_dist",			&_crt_pmt_dist, 		"crt_pmt_dist[5]/F");
 	TBranch * _bn_crt_track_param				= dpd->Branch("crt_track_param",		&_crt_track_param, 		"crt_track_param[5]/F");
@@ -477,7 +477,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 		TBranch * _bn_tpc_track_momentum 			= dpd->Branch("tpc_track_momentum", 			_tpc_track_momentum, 			"tpc_track_momentum[ntracks]/F");
 		TBranch * _bn_tpc_track_length_trajectory 	= dpd->Branch("tpc_track_length_trajectory",	_tpc_track_length_trajectory, 	"tpc_track_length_trajectory[ntracks]/F");
 		TBranch * _bn_tpc_track_length_straight_line= dpd->Branch("tpc_track_length_straight_line", _tpc_track_length_straight_line,"tpc_track_length_straight_line[ntracks]/F");
-		TBranch * _bn_tpc_track_max_CBR_view		= dpd->Branch("tpc_track_max_CBR_view",			_tpc_track_max_CBR_view, 		"tpc_track_max_CBR[ntracks][2]/F");
+		TBranch * _bn_tpc_track_max_CBR_view		= dpd->Branch("tpc_track_max_CBR_view",			_tpc_track_max_CBR_view, 		"tpc_track_max_CBR_view[ntracks][2]/F");
 		
 		TBranch * _bn_tpc_track_start_x				= dpd->Branch("tpc_track_start_x",				_tpc_track_start_x, 			"tpc_track_start_x[ntracks]/F");
 		TBranch * _bn_tpc_track_start_y				= dpd->Branch("tpc_track_start_y",				_tpc_track_start_y, 			"tpc_track_start_y[ntracks]/F");
@@ -2007,7 +2007,7 @@ void initDPDvariables()
 		_tpc_totrecocharge_LAr_view[v]=ERRVAL;
 	}
 	
-	  _crt_matchreco=-1;
+	_crt_matchreco=-1;
 	_crt_fit_yx_m=ERRVAL;
 	_crt_fit_yx_n=ERRVAL;
 	_crt_fit_zx_m=ERRVAL;
