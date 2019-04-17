@@ -1257,7 +1257,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 				
 				
 				// OVERWRITE original histos if wvf correction succeeds
-				if (RC_c>10. && RC_c<RC_c_max) 
+				if (RC_c>=100. && RC_c<=700.) 
 				{
 					if (debug) cout << "Applying wvf correction for channel " << k << endl;
 					WaveformAnalysis::correct_wvf_histo(h[k],h_corr,ped[k],RC_c,d_factor*RC_c);	
@@ -1468,7 +1468,8 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 			{
 				double S2_mintime = tau_S1[k]+4.0;
 				
-				// charge integral calculations
+				// charge integral calculations - old method 
+				
 				q_S2[k] 	    = q*WaveformAnalysis::calc_S2_parameters(h[k],ped[k],S2_mintime,S2_maxtime,binavg_S2[k]);
 				q_S2_corr_p[k]  = (h_corr_p[k])?q*WaveformAnalysis::integral_S2(h_corr_p[k],S2_mintime,S2_maxtime,ped[k]):0;
 				q_S2_corr_m[k]  = (h_corr_m[k])?q*WaveformAnalysis::integral_S2(h_corr_m[k],S2_mintime,S2_maxtime,ped[k]):0;
@@ -1477,11 +1478,12 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 				tau_S2_avg[k] 	= hcenter(h[k],binavg_S2[k]);
 				
 				double t_bpc    = WaveformAnalysis::find_S2_peak_coarse(h[k],S2_mintime,S2_maxtime);
-	
 				q_S2_m2[k]		= q*WaveformAnalysis::calc_S2_parameters_m2(h[k],h_plot[k],ped[k],pedrms[k],S2_mintime,S2_maxtime,t_bpc,tau_S2_start[k],tau_S2_end[k],width_S2[k]);
 				binpeak_S2[k]   = WaveformAnalysis::find_S2_binpeak(h_plot[k],tau_S2_start[k],tau_S2_end[k]);
 				tau_S2[k] 		= hcenter(h_plot[k],binpeak_S2[k]);
 				amp_S2[k] 		= ADC_to_volts*(ped[k]-hget(h_plot[k],binpeak_S2[k]));
+				
+				// now for 
 
 				/*
 				double q1=0;
