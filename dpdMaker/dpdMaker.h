@@ -1146,7 +1146,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 	
 			// find bin maximum of rebinned original histo
 			int orig_binmax = WaveformAnalysis::find_S2_binmax(htmp_rebin, S1_mintime, S2_maxtime);
-			wvf_max_uncorr[k] = ped[k]-hget(htmp_rebin,orig_binmax);
+			wvf_max_uncorr[k] = hget(htmp_rebin,orig_binmax)-ped[k];
 
 
 			// WF fitting and correction for positive-base PMTs
