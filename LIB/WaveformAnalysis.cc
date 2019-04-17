@@ -369,7 +369,7 @@ double WaveformAnalysis::calc_optimal_RC(const TH1* hist, double ped, int rf, in
 		
 		TH1F* hctmp = dynamic_cast<TH1F*>(hc->Rebin(rf,"hctmp"));
 		hctmp->Scale(1./rf);
-		double mymax = ped-hget(hctmp,binmax);
+		double mymax = hget(hctmp,binmax)-ped;
 
 		//cout << "RC_c = " << RC << ", RC_d = " << d_factor*RC << ", histmax = " << mymax << endl;
 		
