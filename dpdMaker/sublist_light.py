@@ -50,8 +50,8 @@ if __name__ == "__main__":
             run=int(blah2)
         if run<0:
             continue
-        #if run>=1414:
-        #    continue
+        if run>=1650:
+            continue
         
         chain = ROOT.TChain("midas_data")
         chain.Add(fullpathname)
