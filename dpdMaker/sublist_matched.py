@@ -50,7 +50,7 @@ if __name__ == "__main__":
         else:
             sys.stdout = fileTBC
                                                                                                                                                                                           
-        print run,subRun
+        print run,subRun,"0"
 
     sys.stdout = sys.__stdout__
     fileDone.close()
