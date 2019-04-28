@@ -109,7 +109,7 @@ void dpdMaker(int light_run, int subrun, bool doLight)
 	}
 	delete r;
 	
-	TChain * t = new TChain("midas_data_new");
+	TChain * t = new TChain("midas_data");
 	t->Add(infilename);
 	
 	gSystem->Exec(Form("mkdir -p %s/light",dpd_dir.c_str()));
