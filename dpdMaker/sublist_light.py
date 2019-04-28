@@ -56,7 +56,7 @@ if __name__ == "__main__":
         chain = ROOT.TChain("midas_data")
         chain.Add(fullpathname)
         entries = chain.GetEntries()
-        if entries<1000:
+        if entries<1000 or fsize/entries<100000:
             file=DpdPath+'/light/dpd-light-'+str(run)+'.root'
             exists = os.path.isfile(file)
             if exists:
