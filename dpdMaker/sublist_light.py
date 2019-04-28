@@ -67,7 +67,8 @@ if __name__ == "__main__":
             continue
         
         for subRun in range (0,int(entries/1000)+1):
-            file=DpdPath+'/light/dpd-light-'+str(run)+'-'+str(subRun)+'.root'
+            subRunString = "%03d"%subRun
+            file=DpdPath+'/light/dpd-light-'+str(run)+'-'+subRunString+'.root'
             exists = os.path.isfile(file)
             if exists:
                 sys.stdout = fileDone                                           
