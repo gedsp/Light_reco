@@ -1120,7 +1120,7 @@ void make_dpd(TChain* t2, int runNum, int trigConf, double drift_field, double g
 		
 			rebinfactor = 40;
 			S1_mintime = 0.3;
-			S1_maxtime = 0.85;
+			S1_maxtime = 1.2;
 			S2_maxtime = 4.0;	
 		}
 		
