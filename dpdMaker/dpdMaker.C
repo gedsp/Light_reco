@@ -66,6 +66,12 @@ bool get_voltages(const string dbfile, int myRun, int mySubrun=-1)
 
 void dpdMaker(int light_run, int subrun, bool doLight)
 {
+	if (!dolight) 
+	{
+		dpdMaker(light_run,subrun); // make matched DPD
+		return;
+	}
+	
 	cout << "dpdMaker:: making DPD for light run " << light_run << endl;
 	
 	//TString infilename = Form("%s/output0000%0.4d.root",light_data_dir.c_str(),light_run);
