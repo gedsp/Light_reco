@@ -10,6 +10,7 @@ double drift_field=0;
 bool lemsON=false;
 int trig_conf=-2;
 
+
 bool get_voltages(const string dbfile, int myRun, int mySubrun=-1)
 {
 	TFile *fdb = new TFile(dbfile.c_str());
@@ -64,9 +65,51 @@ bool get_voltages(const string dbfile, int myRun, int mySubrun=-1)
 }
 
 
+void dpdMaker(int charge_run, int subrun)
+{	
+	cout << "dpdMaker:: making DPD for matched (charge) run " << charge_run << endl;
+		
+	TString infilename = Form("%s/%d-%d-RecoFast-Parser.root",matched_data_dir.c_str(),charge_run,subrun);
+	
+	cout << "Matched data input file: " << infilename.Data() << endl;
+	
+	TFile ifile(infilename);
+	if (ifile.IsZombie())
+	{
+	       cout << "Error opening input file " << infilename.Data() << endl;
+	       gSystem->Exit(-1);
+	}
+	
+	bool sc = get_voltages(db_charge_file,charge_run,subrun);
+	
+	if (!sc)
+	{
+		printf("Matched (charge) run %d and subrun %d not found in db file %s. Exiting\n",charge_run,subrun,db_charge_file.c_str());
+		gSystem->Exit(0);
+	}
+	
+	get_gains(gains,voltages,lemsON); // get gains of the pmts from the voltages.
+	
+	TChain * t = new TChain("analysistree/anatree");
+	int nf = t->Add(infilename);
+	if (nf==0) 
+	{
+		cout << "ERROR adding file " << infilename << " to TChain" << endl;
+		gSystem->Exit(-1);
+	}
+
+	gSystem->Exec(Form("mkdir -p %s/matched",dpd_dir.c_str()));	
+	TString outfile = Form("%s/matched/dpd-matched-%d-%d.root",dpd_dir.c_str(),charge_run,subrun);
+	cout << "DPD outfile: " << outfile.Data() << endl;
+	
+	//analyze the run and store the resulting ntuple in the file specified by the last argument
+	make_dpd(t,charge_run,trig_conf,drift_field,gains,outfile.Data()); 
+
+}
+
 void dpdMaker(int light_run, int subrun, bool doLight)
 {
-	if (!dolight) 
+	if (!doLight) 
 	{
 		dpdMaker(light_run,subrun); // make matched DPD
 		return;
@@ -132,46 +175,4 @@ void dpdMaker(int light_run, int subrun, bool doLight)
 void dpdMaker(int light_run)
 {	
 	dpdMaker(light_run,-1,true);
-}
-
-void dpdMaker(int charge_run, int subrun)
-{	
-	cout << "dpdMaker:: making DPD for matched (charge) run " << charge_run << endl;
-		
-	TString infilename = Form("%s/%d-%d-RecoFast-Parser.root",matched_data_dir.c_str(),charge_run,subrun);
-	
-	cout << "Matched data input file: " << infilename.Data() << endl;
-	
-	TFile ifile(infilename);
-	if (ifile.IsZombie())
-	{
-	       cout << "Error opening input file " << infilename.Data() << endl;
-	       gSystem->Exit(-1);
-	}
-	
-	bool sc = get_voltages(db_charge_file,charge_run,subrun);
-	
-	if (!sc)
-	{
-		printf("Matched (charge) run %d and subrun %d not found in db file %s. Exiting\n",charge_run,subrun,db_charge_file.c_str());
-		gSystem->Exit(0);
-	}
-	
-	get_gains(gains,voltages,lemsON); // get gains of the pmts from the voltages.
-	
-	TChain * t = new TChain("analysistree/anatree");
-	int nf = t->Add(infilename);
-	if (nf==0) 
-	{
-		cout << "ERROR adding file " << infilename << " to TChain" << endl;
-		gSystem->Exit(-1);
-	}
-
-	gSystem->Exec(Form("mkdir -p %s/matched",dpd_dir.c_str()));	
-	TString outfile = Form("%s/matched/dpd-matched-%d-%d.root",dpd_dir.c_str(),charge_run,subrun);
-	cout << "DPD outfile: " << outfile.Data() << endl;
-	
-	//analyze the run and store the resulting ntuple in the file specified by the last argument
-	make_dpd(t,charge_run,trig_conf,drift_field,gains,outfile.Data()); 
-
 }
