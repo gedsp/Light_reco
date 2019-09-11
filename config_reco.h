@@ -21,7 +21,10 @@ const string matched_data_dir = "/eos/user/l/leyton/dpd_20190419/matched/"; // l
 //const string matched_data_dir = "/eos/user/l/leyton/2018Aug24/"; // on lxplus
 
 // set up the input folder where the light-only data is stored.
-const string light_data_dir = "/eos/user/l/leyton/dpd_20190419/light"; // local
+
+//const string light_data_dir = "/eos/user/l/leyton/dpd_20190419/light"; // local
+
+const string light_data_dir = "/eos/experiment/wa105/data/311_PMT/data/root/reprocessed_5apr19/"; // local
 //const string light_data_dir = "/eos/user/c/chlastor/ReprocessedData/21Feb/"; // on lxplus
 
 // set up the input folder where the Highway Algorithm data is stored 
